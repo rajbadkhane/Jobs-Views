@@ -6,7 +6,7 @@ import { usersRouter, adminUsersRouter } from "./handlers/users_handler";
 import { profilesRouter } from "./handlers/profiles_handler";
 import { companiesRouter, adminCompaniesRouter } from "./handlers/companies_handler";
 import { jobsRouter, adminJobsRouter } from "./handlers/jobs_handler";
-import { applicationsRouter } from "./handlers/applications_handler";
+import { applicationsRouter, savedJobsRouter } from "./handlers/applications_handler";
 import { salaryRouter, adminSalaryRouter } from "./handlers/salary_handler";
 import { adminRouter } from "./handlers/admin_handler";
 import { subscriptionsRouter, checkoutRouter } from "./handlers/subscriptions_handler";
@@ -82,9 +82,11 @@ app.route("/jobs", jobsRouter);
 app.route("/api/v1/admin/jobs", adminJobsRouter);
 app.route("/admin/jobs", adminJobsRouter);
 
-// 6. Job Applications Pipeline
+// 6. Job Applications Pipeline & Saved Jobs
 app.route("/api/v1/applications", applicationsRouter);
 app.route("/applications", applicationsRouter);
+app.route("/api/v1/saved-jobs", savedJobsRouter);
+app.route("/saved-jobs", savedJobsRouter);
 
 // 7. Salary Benchmarking & Imports
 app.route("/api/v1/salary", salaryRouter);

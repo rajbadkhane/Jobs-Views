@@ -70,9 +70,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const watchedPassword = (watch("password" as never) as unknown as string | undefined) ?? "";
   const password = watchedPassword;
   const registerField: RegisterField = (name) => {
-    return register(name as never, {
-      setValueAs: (value) => typeof value === "string" ? value.trim() : value
-    });
+    return register(name as never);
   };
   useEffect(() => {
     const subscription = watch((_, info) => {
@@ -125,15 +123,16 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
         gstNumber?: string;
         cinNumber?: string;
       };
-      const [firstName, ...rest] = payload.name.trim().split(" ");
+      const cleanName = (payload.name || "User").trim();
+      const [firstName, ...rest] = cleanName.split(" ");
       await auth.register.mutateAsync({
-        email: payload.email,
+        email: payload.email.trim().toLowerCase(),
         password: payload.password,
         role: payload.role,
-        first_name: firstName,
-        last_name: rest.join(" "),
+        first_name: firstName || "User",
+        last_name: rest.join(" ") || "Candidate",
         mobile: payload.mobile,
-        company_name: payload.companyName,
+        company_name: payload.companyName || "My Company",
         website: payload.website,
         gst_number: payload.gstNumber,
         cin_number: payload.cinNumber
@@ -270,34 +269,33 @@ function RegisterFields({ registerField, formErrors, selectedRole, password, pas
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Name" autoComplete="name" prefix={<UserRound size={16} />} {...registerField("name")} error={formErrors.name?.message} onFocus={() => setStep(1)} />
-        <Input label="Mobile" autoComplete="tel" prefix={<Phone size={16} />} {...registerField("mobile")} error={formErrors.mobile?.message} onFocus={() => setStep(1)} />
+        <Input label="Mobile (Optional)" autoComplete="tel" prefix={<Phone size={16} />} {...registerField("mobile")} error={formErrors.mobile?.message} onFocus={() => setStep(1)} />
       </div>
       <Input label="Email" type="email" autoComplete="email" prefix={<Mail size={16} />} {...registerField("email")} error={formErrors.email?.message} onFocus={() => setStep(1)} />
-      <PasswordInput label="Password" autoComplete="new-password" {...registerField("password")} error={formErrors.password?.message} onFocus={() => setStep(1)} />
-      <PasswordStrength password={password} score={passwordScore} />
-      <PasswordInput label="Confirm password" autoComplete="new-password" {...registerField("confirmPassword")} error={formErrors.confirmPassword?.message} onFocus={() => setStep(1)} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <PasswordInput label="Password" autoComplete="new-password" {...registerField("password")} error={formErrors.password?.message} onFocus={() => setStep(1)} />
+        <PasswordInput label="Confirm password (Optional)" autoComplete="new-password" {...registerField("confirmPassword")} error={formErrors.confirmPassword?.message} onFocus={() => setStep(1)} />
+      </div>
 
       {selectedRole === "EMPLOYER" ? (
         <div className="grid gap-4 rounded-[var(--radius-career-card)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-low)] p-4">
           <div className="flex items-start gap-3">
             <BadgeCheck size={18} className="mt-0.5 text-[var(--cos-primary)]" />
             <div>
-              <div className="font-bold">Company verification</div>
-              <p className="mt-1 text-sm text-[var(--cos-on-surface-variant)]">Employer dashboards unlock after admin review and approval.</p>
+              <div className="font-bold">Company Setup</div>
+              <p className="mt-1 text-sm text-[var(--cos-on-surface-variant)]">You can enter details now or easily update them later in your dashboard.</p>
             </div>
           </div>
-          <Input label="Company name" prefix={<Building2 size={16} />} {...registerField("companyName")} error={formErrors.companyName?.message} onFocus={() => setStep(2)} />
-          <Input label="Website" prefix={<Globe2 size={16} />} {...registerField("website")} error={formErrors.website?.message} onFocus={() => setStep(2)} />
+          <Input label="Company Name (Optional)" prefix={<Building2 size={16} />} {...registerField("companyName")} error={formErrors.companyName?.message} onFocus={() => setStep(2)} />
+          <Input label="Website (Optional)" prefix={<Globe2 size={16} />} {...registerField("website")} error={formErrors.website?.message} onFocus={() => setStep(2)} />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="GST" {...registerField("gstNumber")} error={formErrors.gstNumber?.message} onFocus={() => setStep(2)} />
-            <Input label="CIN" {...registerField("cinNumber")} error={formErrors.cinNumber?.message} onFocus={() => setStep(2)} />
+            <Input label="GST (Optional)" {...registerField("gstNumber")} error={formErrors.gstNumber?.message} onFocus={() => setStep(2)} />
+            <Input label="CIN (Optional)" {...registerField("cinNumber")} error={formErrors.cinNumber?.message} onFocus={() => setStep(2)} />
           </div>
-          <UploadDropzone label="Company logo placeholder" progress={38} />
         </div>
       ) : (
         <div className="grid gap-4 rounded-[var(--radius-career-card)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-low)] p-4">
-          <UploadDropzone label="Resume upload placeholder" progress={42} />
-          <EnterpriseCard title="Career Intelligence preview" description="Resume score, skill gaps, salary insights, and role recommendations unlock after profile setup." icon={<Sparkles size={18} />} />
+          <EnterpriseCard title="Career Intelligence Ready" description="Your secure candidate profile automatically unlocks resume builder tools, AI recommendations, and 1-click job application features upon login." icon={<Sparkles size={18} />} />
         </div>
       )}
     </>

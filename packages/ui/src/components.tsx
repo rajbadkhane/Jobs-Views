@@ -139,7 +139,7 @@ export type InputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "pref
   success?: boolean;
 };
 
-export function Input({ label, error, helperText, prefix, suffix, loading, success, className, id, maxLength, value, defaultValue, ...props }: InputProps) {
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ label, error, helperText, prefix, suffix, loading, success, className, id, maxLength, value, defaultValue, ...props }, ref) => {
   const generatedId = React.useId();
   const inputId = id ?? generatedId;
   const currentLength = typeof value === "string" ? value.length : typeof defaultValue === "string" ? defaultValue.length : undefined;
@@ -165,6 +165,7 @@ export function Input({ label, error, helperText, prefix, suffix, loading, succe
       >
         {prefix ? <span className="text-[var(--cos-on-surface-variant)]">{prefix}</span> : null}
         <input
+          ref={ref}
           id={inputId}
           className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-[var(--cos-outline)]"
           maxLength={maxLength}
@@ -192,12 +193,14 @@ export function Input({ label, error, helperText, prefix, suffix, loading, succe
       </span>
     </motion.label>
   );
-}
+});
+Input.displayName = "Input";
 
-export function PasswordInput({ label = "Password", ...props }: Omit<InputProps, "type" | "suffix">) {
+export const PasswordInput = React.forwardRef<HTMLInputElement, Omit<InputProps, "type" | "suffix">>(({ label = "Password", ...props }, ref) => {
   const [visible, setVisible] = React.useState(false);
   return (
     <Input
+      ref={ref}
       label={label}
       type={visible ? "text" : "password"}
       suffix={
@@ -208,13 +211,15 @@ export function PasswordInput({ label = "Password", ...props }: Omit<InputProps,
       {...props}
     />
   );
-}
+});
+PasswordInput.displayName = "PasswordInput";
 
-export function SearchInput(props: Omit<InputProps, "prefix">) {
-  return <Input prefix={<Search size={16} />} {...props} />;
-}
+export const SearchInput = React.forwardRef<HTMLInputElement, Omit<InputProps, "prefix">>((props, ref) => {
+  return <Input ref={ref} prefix={<Search size={16} />} {...props} />;
+});
+SearchInput.displayName = "SearchInput";
 
-export function Textarea({ label, error, helperText, className, id, maxLength, value, defaultValue, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string; error?: string; helperText?: string }) {
+export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string; error?: string; helperText?: string }>(({ label, error, helperText, className, id, maxLength, value, defaultValue, ...props }, ref) => {
   const generatedId = React.useId();
   const inputId = id ?? generatedId;
   const currentLength = typeof value === "string" ? value.length : typeof defaultValue === "string" ? defaultValue.length : undefined;
@@ -228,6 +233,7 @@ export function Textarea({ label, error, helperText, className, id, maxLength, v
     >
       {label}
       <textarea
+        ref={ref}
         id={inputId}
         className={cn(
           "min-h-28 rounded-[var(--radius-career-input)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] px-3 py-2 text-sm leading-5 text-[var(--cos-on-surface)] outline-none placeholder:text-[var(--cos-outline)]",
@@ -252,7 +258,8 @@ export function Textarea({ label, error, helperText, className, id, maxLength, v
       </span>
     </motion.label>
   );
-}
+});
+Textarea.displayName = "Textarea";
 
 export function Card({ className, ...props }: React.ComponentPropsWithoutRef<typeof motion.div>) {
   const reduceMotion = useReducedMotion();

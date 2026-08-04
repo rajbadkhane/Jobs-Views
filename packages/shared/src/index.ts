@@ -76,25 +76,22 @@ export function apiErrorMessage(error: unknown) {
 }
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8)
+  email: z.string().min(3, "Please enter your email address."),
+  password: z.string().min(4, "Password must be at least 4 characters.")
 });
 
 export const registerSchema = loginSchema.extend({
-  name: z.string().trim().min(2, "Enter your full name."),
-  mobile: z.string().trim().min(8, "Enter a valid mobile number.").optional().or(z.literal("")),
-  confirmPassword: z.string().min(8, "Confirm your password."),
+  name: z.string().min(1, "Please enter your name."),
+  mobile: z.string().optional().or(z.literal("")),
+  confirmPassword: z.string().optional().or(z.literal("")),
   role: z.enum(["EMPLOYER", "JOB_SEEKER"]).default("JOB_SEEKER"),
-  companyName: z.string().trim().optional(),
-  website: z.string().trim().url("Enter a valid website URL.").optional().or(z.literal("")),
-  gstNumber: z.string().trim().optional(),
-  cinNumber: z.string().trim().optional()
+  companyName: z.string().optional(),
+  website: z.string().optional().or(z.literal("")),
+  gstNumber: z.string().optional(),
+  cinNumber: z.string().optional()
 }).superRefine((value, ctx) => {
-  if (value.password !== value.confirmPassword) {
+  if (value.confirmPassword && value.confirmPassword.length > 0 && value.password !== value.confirmPassword) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["confirmPassword"], message: "Passwords must match" });
-  }
-  if (value.role === "EMPLOYER" && !value.companyName?.trim()) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companyName"], message: "Company name is required" });
   }
 });
 

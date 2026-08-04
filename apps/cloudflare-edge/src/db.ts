@@ -3,6 +3,9 @@ import { Redis } from "@upstash/redis";
 
 export interface Env {
   DATABASE_URL: string;
+  HYPERDRIVE?: {
+    connectionString: string;
+  };
   REDIS_URL?: string;
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
@@ -16,18 +19,25 @@ export interface Env {
 }
 
 /**
- * Creates an edge-resilient Postgres SQL client for Supabase pooler connections.
- * Disables prepared statements (`prepare: false`) for seamless transaction pooling compatibility.
+ * Creates an edge-resilient Postgres SQL client using Cloudflare Hyperdrive native connection pooler.
+ * Created freshly per request invocation to conform to Cloudflare Worker I/O stream isolation rules while benefiting from instant edge pooling.
  */
-export function getDb(env: Env) {
-  if (!env.DATABASE_URL) {
-    throw new Error("DATABASE_URL environment variable is missing");
+export function getDb(env: Env): ReturnType<typeof postgres> {
+  // Prioritize native Cloudflare Hyperdrive connection pooler string, fallback to direct Postgres URL
+  const rawUrl = env.HYPERDRIVE?.connectionString || env.DATABASE_URL;
+  if (!rawUrl) {
+    throw new Error("DATABASE_URL or HYPERDRIVE connection environment variable is missing");
   }
-  return postgres(env.DATABASE_URL, {
-    ssl: "require",
-    max: 1, // Keep connection footprint minimal per lightweight edge invocation
+
+  // If using fallback DATABASE_URL without Hyperdrive, ensure port 5432 is used instead of 6543
+  const targetUrl = env.HYPERDRIVE?.connectionString ? rawUrl : rawUrl.replace(":6543/", ":5432/");
+
+  return postgres(targetUrl, {
+    ssl: env.HYPERDRIVE?.connectionString ? false : "require", // Hyperdrive internally wraps SSL to origin
+    max: 1, // Minimal local stream footprint per request, pooled globally by Cloudflare Hyperdrive
     fetch_types: false,
     prepare: false,
+    onnotice: () => {},
   });
 }
 

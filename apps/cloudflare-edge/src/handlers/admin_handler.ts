@@ -14,10 +14,10 @@ adminRouter.get("/dashboard", async (c) => {
   try {
     const sql = getDb(c.env);
     const [usersCount, jobsCount, companiesCount, applicationsCount] = await Promise.all([
-      sql`SELECT COUNT(*) as c FROM users WHERE deleted_at IS NULL`.then((r) => Number(r[0].c)),
-      sql`SELECT COUNT(*) as c FROM jobs WHERE status = 'published' AND deleted_at IS NULL`.then((r) => Number(r[0].c)),
-      sql`SELECT COUNT(*) as c FROM companies WHERE deleted_at IS NULL`.then((r) => Number(r[0].c)),
-      sql`SELECT COUNT(*) as c FROM job_applications`.then((r) => Number(r[0].c)).catch(() => 45),
+      sql`SELECT COUNT(*) as c FROM users WHERE deleted_at IS NULL`.then((r: any) => Number(r[0].c)),
+      sql`SELECT COUNT(*) as c FROM jobs WHERE status = 'published' AND deleted_at IS NULL`.then((r: any) => Number(r[0].c)),
+      sql`SELECT COUNT(*) as c FROM companies WHERE deleted_at IS NULL`.then((r: any) => Number(r[0].c)),
+      sql`SELECT COUNT(*) as c FROM job_applications`.then((r: any) => Number(r[0].c)).catch(() => 45),
     ]);
     await sql.end();
 

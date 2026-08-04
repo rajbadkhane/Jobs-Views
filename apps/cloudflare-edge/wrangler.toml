@@ -1,19 +1,25 @@
 name = "jobs-view-api-edge"
 main = "src/index.ts"
 compatibility_date = "2026-08-04"
+compatibility_flags = ["nodejs_compat"]
 
 # Free Cron Trigger: Pings Render every 10 minutes to eliminate cold starts forever!
 [triggers]
 crons = ["*/10 * * * *"]
 
 # Environment Configuration
-# Update BACKEND_ORIGIN if your exact Render app domain differs from below:
 [vars]
 BACKEND_ORIGIN = "https://jobs-view-api.onrender.com"
 EDGE_CACHE_TTL = "180" # Seconds to cache public search queries at Cloudflare Edge (3 mins)
 APP_ENV = "production"
 CORS_ALLOW_ORIGINS = "https://jobsviews.com,https://www.jobsviews.com,https://admin.jobsviews.com,https://jobs-view-web-rajbadkhar.vercel.app,https://jobs-view-admin-rajbadkhar.vercel.app,https://jobs-view-employer-rajbadkhar.vercel.app,https://jobs-view-web-rajbadkhar-raj-badkhane-s-projects.vercel.app,https://jobs-view-admin-rajbadkhar-raj-badkhane-s-projects.vercel.app,https://jobs-view-employer-rajbadkhar-raj-badkhane-s-projects.vercel.app"
+DATABASE_URL = "postgresql://postgres.mhsboihpuenoxzbmazry:KingR%4012345%40%23@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require"
+REDIS_URL = "rediss://default_ro:ggAAAAAAAV3aAAIgcDLd6uQgIP6b7-Q_QqUq5-Bwk_a7DDrlyJc8oclskaxciw@amazed-walleye-89562.upstash.io:6379"
+UPSTASH_REDIS_REST_URL = "https://amazed-walleye-89562.upstash.io"
+UPSTASH_REDIS_REST_TOKEN = "ggAAAAAAAV3aAAIgcDLd6uQgIP6b7-Q_QqUq5-Bwk_a7DDrlyJc8oclskaxciw"
 JWT_ISSUER = "jobs-view-api"
+JWT_ACCESS_SECRET = "local_jobs_view_access_secret_change_before_production_2026"
+JWT_REFRESH_SECRET = "local_jobs_view_refresh_secret_change_before_production_2026"
 MAIL_PROVIDER = "resend"
 MAIL_FROM = "Jobs View <support@jobsviews.com>"
 RAZORPAY_API_BASE_URL = "https://api.razorpay.com/v1"

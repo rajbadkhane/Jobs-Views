@@ -7,7 +7,7 @@ import React from "react";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Bell, BookOpen, Briefcase, Building2, Calculator, ChevronDown, Menu, Moon, Search, Sun, UserRound, X } from "lucide-react";
+import { ArrowRight, Bell, BookOpen, Briefcase, Building2, Calculator, ChevronDown, GraduationCap, HeartPulse, Menu, Moon, Search, Sparkles, Sun, UserRound, X } from "lucide-react";
 
 import { appConfig } from "@career-os/config";
 import { apiErrorMessage, companyApi, jobsApi, type PublicCompany, type PublicJob, useAuthStore, useThemeStore } from "@career-os/shared";
@@ -44,14 +44,36 @@ export function Navbar() {
     <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
       {publicRoutes.primary.map((route)=><Link key={route.href} href={route.href} className={cn("rounded-md px-3 py-2 text-sm font-semibold hover:bg-[var(--cos-surface-container-low)]",focus)}>{route.label}</Link>)}
       <div className="relative">
-        <button onClick={()=>{setServicesOpen((value)=>!value);setExplore(false)}} className={cn("inline-flex min-h-10 items-center gap-1 rounded-md px-3 text-sm font-bold text-amber-600 dark:text-amber-400 hover:bg-[var(--cos-surface-container-low)]",focus)} aria-expanded={servicesOpen}>Our Services <ChevronDown size={15}/></button>
-        {servicesOpen?<div className="absolute left-0 top-12 grid w-72 gap-1.5 rounded-lg border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] p-2.5 shadow-xl z-50">
-          {publicRoutes.ourServices.map((route)=><Link key={route.href} href={route.href} onClick={close} className="rounded-md p-2 hover:bg-[var(--cos-surface-container-low)] transition flex flex-col gap-0.5"><span className="text-sm font-bold text-[var(--cos-primary)]">{route.label}</span>{route.description?<span className="text-xs text-[var(--cos-on-surface-variant)] line-clamp-1">{route.description}</span>:null}</Link>)}
+        <button onClick={()=>{setServicesOpen((value)=>!value);setExplore(false)}} className={cn("inline-flex min-h-10 items-center gap-1 rounded-md px-3 text-sm font-bold text-amber-600 dark:text-amber-400 hover:bg-[var(--cos-surface-container-low)]",focus)} aria-expanded={servicesOpen}>Our Services <ChevronDown size={15} className={cn("transition-transform duration-200", servicesOpen && "rotate-180")}/></button>
+        {servicesOpen?<div className="absolute left-0 top-12 z-[100] grid w-80 gap-2 rounded-2xl border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)]/98 p-4 shadow-2xl backdrop-blur-2xl transition duration-200 animate-in fade-in-0 zoom-in-95">
+          <div className="flex items-center gap-2 border-b border-[var(--cos-outline-variant)] pb-2 text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400"><Briefcase size={15}/><span>Commercial Services Hub</span></div>
+          <div className="grid gap-1.5">
+            {publicRoutes.ourServices.map((route)=><Link key={route.href} href={route.href} onClick={close} className="group rounded-xl p-3 hover:bg-[var(--cos-surface-container-low)] border border-transparent hover:border-[var(--cos-outline-variant)] transition-all flex flex-col gap-1 hover:translate-x-0.5"><div className="flex items-center justify-between"><span className="text-sm font-black text-[var(--cos-primary)] group-hover:text-amber-600 dark:group-hover:text-amber-400">{route.label}</span><ArrowRight size={14} className="opacity-0 transition-opacity group-hover:opacity-100 text-amber-500"/></div>{route.description?<span className="text-xs text-[var(--cos-on-surface-variant)] leading-normal line-clamp-2 font-medium">{route.description}</span>:null}</Link>)}
+          </div>
         </div>:null}
       </div>
       <div className="relative">
-        <button onClick={()=>{setExplore((value)=>!value);setServicesOpen(false)}} className={cn("inline-flex min-h-10 items-center gap-1 rounded-md px-3 text-sm font-semibold hover:bg-[var(--cos-surface-container-low)]",focus)} aria-expanded={explore}>Explore <ChevronDown size={15}/></button>
-        {explore?<div className="absolute left-0 top-12 grid w-64 gap-1 rounded-md border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] p-2 shadow-lg z-50">{[...publicRoutes.explore,...publicRoutes.tools].map((route)=><Link key={route.href+route.label} href={route.href} onClick={close} className="rounded-md px-3 py-2 text-sm hover:bg-[var(--cos-surface-container-low)]">{route.label}</Link>)}</div>:null}
+        <button onClick={()=>{setExplore((value)=>!value);setServicesOpen(false)}} className={cn("inline-flex min-h-10 items-center gap-1 rounded-md px-3 text-sm font-semibold hover:bg-[var(--cos-surface-container-low)]",focus)} aria-expanded={explore}>Explore <ChevronDown size={15} className={cn("transition-transform duration-200", explore && "rotate-180")}/></button>
+        {explore?<div className="absolute -left-48 top-12 z-[100] grid w-[760px] grid-cols-3 gap-5 rounded-2xl border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)]/98 p-5 shadow-2xl backdrop-blur-2xl transition duration-200 animate-in fade-in-0 zoom-in-95">
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center gap-2 border-b border-[var(--cos-outline-variant)] pb-2 text-xs font-extrabold uppercase tracking-wider text-[var(--cos-primary)]"><GraduationCap size={16}/><span>Experience &amp; Education</span></div>
+            <div className="grid gap-1">
+              {publicRoutes.explore.slice(0, 5).map((route)=><Link key={route.href+route.label} href={route.href} onClick={close} className="group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-[var(--cos-on-surface)] transition-all duration-150 hover:translate-x-1 hover:bg-[var(--cos-primary)]/10 hover:text-[var(--cos-primary)]"><span>{route.label}</span><ArrowRight size={14} className="opacity-0 transition-opacity group-hover:opacity-100 text-[var(--cos-primary)]"/></Link>)}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center gap-2 border-b border-[var(--cos-outline-variant)] pb-2 text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400"><HeartPulse size={16}/><span>Healthcare &amp; Remote</span></div>
+            <div className="grid gap-1">
+              {publicRoutes.explore.slice(5, 10).map((route)=><Link key={route.href+route.label} href={route.href} onClick={close} className="group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-[var(--cos-on-surface)] transition-all duration-150 hover:translate-x-1 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400"><span>{route.label}</span><ArrowRight size={14} className="opacity-0 transition-opacity group-hover:opacity-100 text-emerald-600 dark:text-emerald-400"/></Link>)}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 rounded-xl border border-[var(--cos-outline-variant)] bg-slate-50 dark:bg-slate-900/60 p-3.5 shadow-inner">
+            <div className="flex items-center gap-2 border-b border-[var(--cos-outline-variant)] pb-2 text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400"><Sparkles size={16}/><span>Career Tools &amp; Growth</span></div>
+            <div className="grid gap-1">
+              {[publicRoutes.explore[10], ...publicRoutes.tools].filter(Boolean).map((route)=><Link key={route.href+route.label} href={route.href} onClick={close} className="group flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm font-bold text-[var(--cos-on-surface)] transition-all hover:bg-white dark:hover:bg-slate-800 hover:text-amber-600 dark:hover:text-amber-400 hover:shadow-sm"><span>{route.label}</span><ArrowRight size={13} className="opacity-0 transition-opacity group-hover:opacity-100 text-amber-500"/></Link>)}
+            </div>
+          </div>
+        </div>:null}
       </div>
     </nav>
     <button onClick={()=>window.dispatchEvent(new CustomEvent("jobsview:open-command-center"))} className={cn("ml-auto hidden min-h-10 min-w-52 items-center gap-2 rounded-full border border-[var(--cos-outline-variant)] px-4 text-sm text-[var(--cos-on-surface-variant)] md:flex",focus)}><Search size={16}/> Search <span className="ml-auto text-xs">Ctrl K</span></button>

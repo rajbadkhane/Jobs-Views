@@ -253,6 +253,7 @@ function pct(value: number, total: number) {
   return Math.round((value / total) * 10000) / 100;
 }
 
-function normalize(value = "") {
+function normalize(value?: unknown): string {
+  if (!value || typeof value !== "string") return "";
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }

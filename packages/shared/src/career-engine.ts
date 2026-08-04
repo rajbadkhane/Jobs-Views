@@ -244,6 +244,7 @@ function isEmpty(value: unknown) {
   return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 }
 
-function normalize(value = "") {
+function normalize(value?: unknown): string {
+  if (!value || typeof value !== "string") return "";
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }

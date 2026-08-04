@@ -15,6 +15,11 @@ export const publicRoutes = {
     { label: "12th pass jobs", href: "/jobs?q=12th+pass" },
     { label: "ITI jobs", href: "/jobs?q=ITI" },
     { label: "Fresher jobs", href: "/jobs?q=fresher" },
+    { label: "Experienced jobs", href: "/jobs?q=experienced" },
+    { label: "Nursing home care job", href: "/jobs?q=Nursing+home+care" },
+    { label: "Staff nurse job", href: "/jobs?q=Staff+nurse" },
+    { label: "Doctors job", href: "/jobs?q=Doctors" },
+    { label: "Work from home job", href: "/jobs?q=Work+from+home" },
     { label: "Remote jobs", href: "/jobs?mode=remote" },
     { label: "Career guides", href: "/career-guides" }
   ],

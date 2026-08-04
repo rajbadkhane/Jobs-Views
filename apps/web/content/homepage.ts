@@ -49,7 +49,7 @@ export const homepage = {
       { label: "Career profiles", value: 2400000, suffix: "+" },
       { label: "Cities covered", value: 900, suffix: "+" }
     ],
-    popularSearches: ["Remote product manager", "Fresher software engineer", "Data analyst", "HR recruiter", "Govt jobs"]
+    popularSearches: ["Nursing home care", "Staff nurse", "Doctors", "Work from home", "Fresher jobs", "Experienced jobs", "Remote product manager", "Data analyst", "Govt jobs"]
   },
   search: {
     title: "Search across India's opportunity graph",
@@ -87,7 +87,7 @@ export const homepage = {
   recommendedJobs: {
     title: "Recommended jobs",
     subtitle: "Large-format cards ready for personalization and AI match scoring.",
-    filters: ["Best match", "Remote", "High salary", "Freshers", "Urgent"],
+    filters: ["Best match", "Remote", "High salary", "Freshers", "Experienced", "Healthcare", "Work from home", "Urgent"],
     items: [
       {
         title: "Senior Frontend Engineer",
@@ -193,7 +193,7 @@ export const homepage = {
     columns: [
       { title: "Popular Cities", links: ["Bengaluru", "Hyderabad", "Pune", "Mumbai", "Delhi NCR", "Chennai"] },
       { title: "Popular Skills", links: ["React", "Java", "Python", "Go", "Digital Marketing", "Sales"] },
-      { title: "Popular Searches", links: ["Remote jobs", "Fresher jobs", "Walk-in jobs", "Govt jobs", "Internships"] },
+      { title: "Popular Searches", links: ["Remote jobs", "Fresher jobs", "Experienced jobs", "Nursing home care", "Staff nurse", "Doctors", "Work from home", "Walk-in jobs", "Govt jobs"] },
       { title: "Companies", links: ["Top companies", "Verified employers", "Hiring now", "Company reviews"] },
       { title: "Career", links: ["Career guides", "Salary reports", "Resume review", "Interview prep"] },
       { title: "Support", links: ["Help center", "Contact", "Feedback", "Report issue"] },

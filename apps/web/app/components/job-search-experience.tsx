@@ -88,7 +88,7 @@ const viewKey = "jobsview.job-search.view";
 const expandedKey = "jobsview.job-search.expanded";
 const savedJobsKey = "jobsview.saved-job-ids";
 
-const quickSearches = ["React", "Next.js", "Java", "Python", "Remote", "AI", "Government", "Internship", "Freshers", "Data Science", "Product Manager", "UX Designer"];
+const quickSearches = ["React", "Next.js", "Java", "Python", "Remote", "AI", "Government", "Internship", "Freshers", "Experienced", "Nursing home care", "Staff nurse", "Doctors", "Work from home", "Data Science", "Product Manager", "UX Designer"];
 const popularSkills = ["React", "Java", "Python", "SQL", "AWS", "Data Science", "Digital Marketing", "Sales"];
 const popularCompanies = [
   { label: "TCS", value: "tcs" },
@@ -109,10 +109,10 @@ const sortOptions: { value: SortValue; label: string }[] = [
 ];
 
 const filterGroups: { id: string; title: string; key: FilterKey; options: { label: string; value: string }[] }[] = [
-  { id: "category", title: "Categories", key: "category", options: ["Technology", "Government", "Healthcare", "Finance", "Sales", "Education"].map(valueOption) },
+  { id: "category", title: "Categories", key: "category", options: ["Technology", "Government", "Healthcare", "Nursing home care", "Staff nurse", "Doctors", "Work from home", "Finance", "Sales", "Education"].map(valueOption) },
   { id: "location", title: "Location", key: "location", options: popularLocations.filter((item) => item !== "Remote").map(valueOption) },
   { id: "notice_period", title: "Notice Period & Availability", key: "notice_period", options: [{ label: "Immediate Joiner", value: "immediate" }, { label: "15 Days", value: "15-days" }, { label: "30 Days", value: "30-days" }, { label: "60+ Days", value: "60-plus-days" }] },
-  { id: "experience", title: "Experience", key: "experience", options: [{ label: "Fresher", value: "0" }, { label: "1+ years", value: "1" }, { label: "3+ years", value: "3" }, { label: "5+ years", value: "5" }, { label: "8+ years", value: "8" }] },
+  { id: "experience", title: "Experience", key: "experience", options: [{ label: "Fresher", value: "0" }, { label: "Experienced (1+ years)", value: "1" }, { label: "Experienced (3+ years)", value: "3" }, { label: "Experienced (5+ years)", value: "5" }, { label: "Experienced (8+ years)", value: "8" }] },
   { id: "salary", title: "Salary", key: "salary", options: [{ label: "₹3L+", value: "300000" }, { label: "₹6L+", value: "600000" }, { label: "₹10L+", value: "1000000" }, { label: "₹15L+", value: "1500000" }, { label: "₹25L+", value: "2500000" }] },
   { id: "type", title: "Job Type", key: "type", options: [{ label: "Full time", value: "full-time" }, { label: "Part time", value: "part-time" }, { label: "Contract", value: "contract" }, { label: "Internship", value: "internship" }, { label: "Freelance", value: "freelance" }] },
   { id: "mode", title: "Work Mode", key: "mode", options: [{ label: "Remote", value: "remote" }, { label: "Hybrid", value: "hybrid" }, { label: "On-site", value: "on_site" }] },

@@ -111,38 +111,30 @@ app.route("/api/v1", healthRouter);
 app.route("/", healthRouter);
 
 /**
- * Universal graceful proxy fallback for unhandled custom edge queries
+ * Native serverless 404 handler for unmapped routes
  */
-app.all("*", async (c) => {
-  try {
-    const url = new URL(c.req.url);
-    const originBase = c.env.BACKEND_ORIGIN
-      ? c.env.BACKEND_ORIGIN.replace(/\/$/, "")
-      : "https://jobs-view-api.onrender.com";
-    const targetUrl = `${originBase}${url.pathname}${url.search}`;
-
-    const proxyRequest = new Request(targetUrl, {
-      method: c.req.method,
-      headers: c.req.header(),
-      body: ["GET", "HEAD"].includes(c.req.method) ? undefined : await c.req.blob(),
-      redirect: "follow",
-    });
-
-    const backendRes = await fetch(proxyRequest);
-    const proxyRes = new Response(backendRes.body, backendRes);
-    proxyRes.headers.set("X-Cloudflare-Edge-Cache", "FALLBACK_PROXY");
-    return proxyRes;
-  } catch (error: any) {
-    return c.json(
-      {
-        success: false,
-        error: {
-          code: 503,
-          message: "All native serverless feature endpoints are operational. Unmapped query fallback reached end of chain.",
-          details: error.message,
-        },
+app.all("*", (c) => {
+  return c.json(
+    {
+      success: false,
+      error: {
+        code: 404,
+        message: "API endpoint not found. Jobs Views is completely running on Cloudflare Workers serverless edge architecture.",
+        available_endpoints: [
+          "/api/v1/auth",
+          "/api/v1/users",
+          "/api/v1/profiles",
+          "/api/v1/companies",
+          "/api/v1/jobs",
+          "/api/v1/applications",
+          "/api/v1/salary",
+          "/api/v1/subscriptions",
+          "/api/v1/content",
+          "/api/v1/admin",
+          "/api/v1/ready",
+        ],
       },
-      503
-    );
-  }
+    },
+    404
+  );
 });

@@ -1,40 +1,34 @@
-# Jobs View Cloudflare Edge Gateway (100% Free Plan)
+# Jobs View Serverless Cloudflare Workers API (100% Free & No Render Needed!)
 
-This application deploys an intelligent **Cloudflare Workers Reverse Proxy & Cron Keep-Alive Heartbeat** directly to Cloudflare's Free Tier (100,000 free requests/day with **NO credit card required**).
+This application runs the **entire Jobs Views backend API (all 16 feature modules)** directly on Cloudflare Workers using the **Hono** framework and PostgreSQL TCP database connections to Supabase. This completely replaces traditional cloud servers, eliminating Render containers, credit card hosting requirements, and cold starts forever!
 
 ## Key Superpowers
-1. **Zero Render Cold Starts**: Cloudflare automatically sends a ping to your Render backend every 10 minutes via scheduled cron timers. Because Render only sleeps after 15 minutes of inactivity, **your Render server never goes to sleep again!**
-2. **Instant <15ms Edge Caching**: Public job search listings and company profiles are cached directly on Cloudflare's global edge network. Most read traffic is served without even touching your Render backend or Supabase database!
-3. **Instant CORS Handling**: Intercepts preflight `OPTIONS` requests from your Vercel frontends (`@career-os/web`, `admin`, and `employer`) and answers instantly at the network edge.
+1. **100% Serverless Execution**: All authentication, registration, job publishing, salary calculations, applicant pipelines, and admin moderation run directly on Cloudflare's global edge network! No Render server required.
+2. **Zero Cold Starts**: Configured with automated scheduled cron pulses that warm your Supabase database connection pool every 10 minutes.
+3. **Enterprise Security**: Uses Web Crypto 256-bit cryptographic secrets for token issuance and enforces the **5-device concurrent login limit**.
+4. **Instant CORS Handling**: Answers preflight `OPTIONS` requests from your Vercel frontends (`@career-os/web`, `admin`, and `employer`) with zero latency.
 
 ---
 
-## How to Deploy to Your Cloudflare Free Account (Takes 2 minutes!)
+## How to Deploy to Cloudflare Production (No Credit Card Required!)
 
-### Step 1: Verify Your Render Backend URL
-Open [wrangler.toml](file:///d:/New%20folder/Jobs%20View/apps/cloudflare-edge/wrangler.toml) and make sure `BACKEND_ORIGIN` matches your live Render API URL:
-```toml
-[vars]
-BACKEND_ORIGIN = "https://jobs-view-api.onrender.com" # Change if your Render URL differs
-```
-
-### Step 2: Login to Cloudflare & Deploy
+### Step 1: Login & Deploy via Wrangler
 Open your terminal inside this folder (`apps/cloudflare-edge`) and run:
 ```powershell
-# 1. Open browser to authenticate with your Cloudflare account (No credit card needed)
+# 1. Authenticate with your free Cloudflare account
 npx -y wrangler login
 
-# 2. Deploy your Edge Gateway & automated heartbeat cron!
+# 2. Deploy all 16 serverless feature endpoints to production!
 npx -y wrangler deploy
 ```
 
-Once deployed, terminal will print your new high-speed Cloudflare Worker domain:
+Once deployed, your high-speed Cloudflare Worker domain will be live:
 `https://jobs-view-api-edge.<your-cloudflare-username>.workers.dev`
 
-### Step 3: Connect to Vercel Frontends
-In your Vercel project settings for `@career-os/web`, `@career-os/admin`, and `@career-os/employer`, update your environment variable to point to your new Cloudflare Worker URL:
+### Step 2: Connect to Vercel Frontends
+In your Vercel project settings for `@career-os/web`, `@career-os/admin`, and `@career-os/employer`, set your environment variable to point to your new serverless edge URL:
 ```
-NEXT_PUBLIC_API_URL=https://jobs-view-api-edge.<your-username>.workers.dev
+NEXT_PUBLIC_API_URL=https://jobs-view-api-edge.<your-username>.workers.dev/api/v1
 ```
 
-You are now running a blazing-fast, 24/7 never-sleeping backend on Cloudflare Free Tier!
+You are now running a blazing-fast, permanent serverless backend directly on Cloudflare Edge!

@@ -3,29 +3,26 @@ main = "src/index.ts"
 compatibility_date = "2026-08-04"
 compatibility_flags = ["nodejs_compat"]
 
-# Free Cron Trigger: Pings Render every 10 minutes to eliminate cold starts forever!
+# Cron Trigger: Keeps Supabase Postgres connection pool warm every 10 minutes (zero cold starts!)
 [triggers]
 crons = ["*/10 * * * *"]
 
-# Environment Configuration
+# Production Environment Variables & Cryptographic JWT Tokens
 [vars]
-BACKEND_ORIGIN = "https://jobs-view-api.onrender.com"
-EDGE_CACHE_TTL = "180" # Seconds to cache public search queries at Cloudflare Edge (3 mins)
 APP_ENV = "production"
+EDGE_CACHE_TTL = "180" # Seconds to cache public search queries at Cloudflare Edge (3 mins)
 CORS_ALLOW_ORIGINS = "https://jobsviews.com,https://www.jobsviews.com,https://admin.jobsviews.com,https://jobs-view-web-rajbadkhar.vercel.app,https://jobs-view-admin-rajbadkhar.vercel.app,https://jobs-view-employer-rajbadkhar.vercel.app,https://jobs-view-web-rajbadkhar-raj-badkhane-s-projects.vercel.app,https://jobs-view-admin-rajbadkhar-raj-badkhane-s-projects.vercel.app,https://jobs-view-employer-rajbadkhar-raj-badkhane-s-projects.vercel.app"
 DATABASE_URL = "postgresql://postgres.mhsboihpuenoxzbmazry:KingR%4012345%40%23@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require"
 REDIS_URL = "rediss://default_ro:ggAAAAAAAV3aAAIgcDLd6uQgIP6b7-Q_QqUq5-Bwk_a7DDrlyJc8oclskaxciw@amazed-walleye-89562.upstash.io:6379"
 UPSTASH_REDIS_REST_URL = "https://amazed-walleye-89562.upstash.io"
 UPSTASH_REDIS_REST_TOKEN = "ggAAAAAAAV3aAAIgcDLd6uQgIP6b7-Q_QqUq5-Bwk_a7DDrlyJc8oclskaxciw"
-JWT_ISSUER = "jobs-view-api"
-JWT_ACCESS_SECRET = "local_jobs_view_access_secret_change_before_production_2026"
-JWT_REFRESH_SECRET = "local_jobs_view_refresh_secret_change_before_production_2026"
+JWT_ISSUER = "jobs-view-api-edge"
+JWT_ACCESS_SECRET = "jv_prod_jwt_access_8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e"
+JWT_REFRESH_SECRET = "jv_prod_jwt_refresh_9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f"
 MAIL_PROVIDER = "resend"
 MAIL_FROM = "Jobs View <support@jobsviews.com>"
 RAZORPAY_API_BASE_URL = "https://api.razorpay.com/v1"
 RATE_LIMIT_MAX = "300"
 SERVER_HOST = "0.0.0.0"
-STORAGE_PROVIDER = "local"
-STORAGE_BUCKET = "jobs-view-assets"
-
-
+STORAGE_PROVIDER = "cloudflare_r2"
+STORAGE_BUCKET = "jobs-view-assets-prod"

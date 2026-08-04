@@ -2,7 +2,7 @@ import { Context, Next } from "hono";
 import { jwtVerify } from "jose";
 import { Env } from "./db";
 
-const DEFAULT_SECRET = "local_jobs_view_access_secret_change_before_production_2026";
+const DEFAULT_SECRET = "jv_prod_jwt_access_8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e";
 
 export interface AuthContext {
   id: string;

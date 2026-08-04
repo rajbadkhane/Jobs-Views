@@ -1,5 +1,5 @@
 import { app } from "./router";
-import { Env } from "./db";
+import { getDb, Env } from "./db";
 
 export default {
   /**
@@ -11,19 +11,16 @@ export default {
 
   /**
    * Free Cron Trigger Handler: Runs every 10 minutes (configured in wrangler.toml)
-   * Sends a heartbeat pulse to legacy Render fallback services to eliminate cold start delays during gradual transition.
+   * Executes a lightweight heartbeat directly against Supabase database pooler to keep Postgres connections warm and eliminate cold starts!
    */
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     try {
-      const originBase = env.BACKEND_ORIGIN ? env.BACKEND_ORIGIN.replace(/\/$/, "") : "https://jobs-view-api.onrender.com";
-      const healthUrl = `${originBase}/ready`;
-      const res = await fetch(healthUrl, {
-        method: "GET",
-        headers: { "User-Agent": "Cloudflare-Worker-KeepAlive-Heartbeat/2.0" },
-      });
-      console.log(`[Heartbeat] Pinged ${healthUrl} -> Status: ${res.status}`);
+      const sql = getDb(env);
+      await sql`SELECT 1 as heartbeat`;
+      await sql.end();
+      console.log(`[Edge Heartbeat] Successfully warmed database connection pool at ${new Date().toISOString()}`);
     } catch (error: any) {
-      console.error(`[Heartbeat] Failed to ping Render fallback origin:`, error.message);
+      console.error(`[Edge Heartbeat] Database warming pulse encountered an issue:`, error.message);
     }
   },
 };

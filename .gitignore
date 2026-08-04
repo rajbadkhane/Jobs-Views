@@ -55,6 +55,11 @@ redisdata/
 .server-logs/
 .run/
 .tmp/
+.wrangler/
 *.err.log
 *.out.log
 
+
+
+.vercel
+.env*

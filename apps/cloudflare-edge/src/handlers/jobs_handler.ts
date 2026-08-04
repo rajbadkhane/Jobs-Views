@@ -15,6 +15,18 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, "") || `job-${Date.now()}`;
 }
 
+function formatWorkMode(mode?: any): string {
+  const m = (mode || "on_site").toString().toLowerCase().trim().replace(/-/g, "_").replace(/\s+/g, "_");
+  return ["remote", "hybrid", "on_site"].includes(m) ? m : "on_site";
+}
+
+function formatSalaryPeriod(period?: any): string {
+  const p = (period || "annual").toString().toLowerCase().trim();
+  if (p === "yearly" || p === "year" || p === "per year") return "annual";
+  if (p === "month" || p === "per month") return "monthly";
+  return ["hourly", "daily", "monthly", "annual"].includes(p) ? p : "annual";
+}
+
 // Public catalog and search
 jobsRouter.get("/", async (c) => {
   try {
@@ -117,7 +129,7 @@ jobsRouter.post("/", authenticate(), async (c) => {
       if (ep.length > 0) companyId = ep[0].company_id;
     }
     if (!companyId) {
-      const defaultCo = await sql`INSERT INTO companies (name, slug, status) VALUES (${auth.email + " Corp"}, ${slugify(auth.email) + "-" + Math.floor(1000 + Math.random()*9000)}, 'verified') RETURNING id`;
+      const defaultCo = await sql`INSERT INTO companies (name, slug, status) VALUES (${auth.email + " Corp"}, ${slugify(auth.email) + "-" + Math.floor(1000 + Math.random()*9000)}, 'approved') RETURNING id`;
       companyId = defaultCo[0].id;
     }
 
@@ -135,9 +147,9 @@ jobsRouter.post("/", authenticate(), async (c) => {
       )
       VALUES (
         ${companyId}, 1, ${title}, ${jobSlug}, ${body.short_description || title}, ${body.full_description || body.short_description || title},
-        NULLIF(${Number(body.salary_min) || 0}, 0), NULLIF(${Number(body.salary_max) || 0}, 0), ${body.currency || "INR"}, ${body.salary_period || "annual"}, ${body.salary_basis || "ctc"},
+        NULLIF(${Number(body.salary_min) || 0}, 0), NULLIF(${Number(body.salary_max) || 0}, 0), ${body.currency || "INR"}, ${formatSalaryPeriod(body.salary_period)}, ${body.salary_basis || "ctc"},
         ${Number(body.experience_min) || 0}, NULLIF(${Number(body.experience_max) || 0}, 0), ${body.education || "Any Graduate"}, ${Number(body.openings) || 1},
-        ${body.work_mode || "On-site"}, ${body.country || "IN"}, ${body.state || "India"}, ${body.city || "Multiple Cities"}, 'published', 'public',
+        ${formatWorkMode(body.work_mode)}, ${body.country || "IN"}, ${body.state || "India"}, ${body.city || "Multiple Cities"}, 'published', 'public',
         ${JSON.stringify(jobTypesList)}::jsonb, NOW(), ${auth.id}
       )
       RETURNING *
@@ -192,7 +204,7 @@ adminJobsRouter.post("/quick-post", async (c) => {
     const jobTitle = (jobData.title || "Open Career Opportunity").toString().trim() || "Open Career Opportunity";
     const fullDescription = (jobData.full_description || jobData.short_description || "Further details regarding responsibilities and qualifications will be shared during interview steps.").toString();
     const shortDescription = (jobData.short_description || fullDescription.slice(0, 150) + "...").toString();
-    const workMode = (jobData.work_mode || "On-site").toString();
+    const workMode = formatWorkMode(jobData.work_mode);
     const city = (jobData.city || "Various Locations").toString();
     const state = (jobData.state || "India").toString();
     const country = (jobData.country || "IN").toString();
@@ -212,7 +224,7 @@ adminJobsRouter.post("/quick-post", async (c) => {
       } else {
         const newCo = await tx`
           INSERT INTO companies (name, slug, website, status)
-          VALUES (${companyName}, ${companySlug}, ${companyData.website || ""}, 'verified')
+          VALUES (${companyName}, ${companySlug}, ${companyData.website || ""}, 'approved')
           RETURNING id
         `;
         companyId = newCo[0].id;
@@ -248,7 +260,7 @@ adminJobsRouter.post("/quick-post", async (c) => {
         VALUES (
           ${companyId}, ${jobTypeId}, ${jobTitle}, ${jobSlug}, ${shortDescription}, ${fullDescription},
           ${responsibilitiesJSON}::jsonb, ${requirementsJSON}::jsonb, ${qualificationsJSON}::jsonb, ${benefitsJSON}::jsonb,
-          NULLIF(${Number(jobData.salary_min) || 0}, 0), NULLIF(${Number(jobData.salary_max) || 0}, 0), ${currency}, ${jobData.salary_period || "annual"}, ${jobData.salary_basis || "ctc"},
+          NULLIF(${Number(jobData.salary_min) || 0}, 0), NULLIF(${Number(jobData.salary_max) || 0}, 0), ${currency}, ${formatSalaryPeriod(jobData.salary_period)}, ${jobData.salary_basis || "ctc"},
           ${Number(jobData.experience_min) || 0}, NULLIF(${Number(jobData.experience_max) || 0}, 0), ${jobData.education || "Any Graduate"}, ${Number(jobData.openings) || 1},
           ${workMode}, ${country}, ${state}, ${city}, 'published', 'public',
           ${JSON.stringify(jobTypesList)}::jsonb, ${publishedAt}

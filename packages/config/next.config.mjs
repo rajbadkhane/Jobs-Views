@@ -1,4 +1,4 @@
-const apiOrigin = process.env.NEXT_PUBLIC_API_URL ? new URL(process.env.NEXT_PUBLIC_API_URL).origin : "http://localhost:8080";
+const apiOrigin = process.env.NEXT_PUBLIC_API_URL ? new URL(process.env.NEXT_PUBLIC_API_URL).origin : "https://jobs-view-api-edge.career-os-cloudflare-edge.workers.dev";
 const monitoringOrigin = process.env.NEXT_PUBLIC_MONITORING_ENDPOINT ? new URL(process.env.NEXT_PUBLIC_MONITORING_ENDPOINT).origin : "";
 
 /** @type {import('next').NextConfig} */

@@ -77,7 +77,7 @@ companiesRouter.post("/", authenticate(), async (c) => {
     const sql = getDb(c.env);
     const inserted = await sql`
       INSERT INTO companies (name, slug, website, industry, description, size_range, status)
-      VALUES (${name}, ${slug}, ${body.website || ""}, ${body.industry || "General"}, ${body.description || ""}, ${body.size_range || "11-50"}, 'verified')
+      VALUES (${name}, ${slug}, ${body.website || ""}, ${body.industry || "General"}, ${body.description || ""}, ${body.size_range || "11-50"}, 'approved')
       RETURNING *
     `;
     await sql.end();
@@ -125,7 +125,7 @@ adminCompaniesRouter.get("/", async (c) => {
 adminCompaniesRouter.patch("/:id/verify", async (c) => {
   const id = c.req.param("id") || "";
   const sql = getDb(c.env);
-  await sql`UPDATE companies SET status = 'verified', updated_at = NOW() WHERE id = ${id}`.catch(() => {});
+  await sql`UPDATE companies SET status = 'approved', updated_at = NOW() WHERE id = ${id}`.catch(() => {});
   await sql.end();
   return c.json({ success: true, message: "Company officially verified by Admin." });
 });

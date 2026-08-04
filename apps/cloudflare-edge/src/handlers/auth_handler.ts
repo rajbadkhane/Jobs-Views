@@ -94,7 +94,7 @@ authRouter.post("/register", async (c) => {
         const coSlug = slugify(companyName) + "-" + Math.floor(100 + Math.random() * 900);
         const newCo = await tx`
           INSERT INTO companies (name, slug, website, gst_number, cin_number, status)
-          VALUES (${companyName}, ${coSlug}, ${body.website || ""}, ${body.gst_number || ""}, ${body.cin_number || ""}, 'verified')
+          VALUES (${companyName}, ${coSlug}, ${body.website || ""}, ${body.gst_number || ""}, ${body.cin_number || ""}, 'approved')
           RETURNING id
         `;
         await tx`

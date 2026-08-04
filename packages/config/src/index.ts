@@ -1,5 +1,5 @@
 export const appConfig = {
-  apiBaseUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1",
+  apiBaseUrl: process.env.NEXT_PUBLIC_API_URL ?? "https://jobs-view-api-edge.career-os-cloudflare-edge.workers.dev/api/v1",
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   employerUrl: process.env.NEXT_PUBLIC_EMPLOYER_URL ?? "http://localhost:3002",
   adminUrl: process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001",

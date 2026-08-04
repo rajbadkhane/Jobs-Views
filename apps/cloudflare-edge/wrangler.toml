@@ -1,0 +1,13 @@
+name = "jobs-view-api-edge"
+main = "src/index.ts"
+compatibility_date = "2026-08-04"
+
+# Free Cron Trigger: Pings Render every 10 minutes to eliminate cold starts forever!
+[triggers]
+crons = ["*/10 * * * *"]
+
+# Environment Configuration
+# Update BACKEND_ORIGIN if your exact Render app domain differs from below:
+[vars]
+BACKEND_ORIGIN = "https://jobs-view-api.onrender.com"
+EDGE_CACHE_TTL = "180" # Seconds to cache public search queries at Cloudflare Edge (3 mins)

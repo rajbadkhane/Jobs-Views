@@ -15,32 +15,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var hardcodedAdminPermissions = []string{
-	"settings:configure",
-	"user:manage",
-	"company:verify",
-	"job:moderate",
-	"report:view",
-}
-
-var hardcodedAdmins = map[string]struct {
-	id       uuid.UUID
-	password string
-}{
-	"admin.one@jobsview.local": {
-		id:       uuid.MustParse("11111111-1111-4111-8111-111111111111"),
-		password: "Admin@One2026!",
-	},
-	"admin.two@jobsview.local": {
-		id:       uuid.MustParse("22222222-2222-4222-8222-222222222222"),
-		password: "Admin@Two2026!",
-	},
-	"admin.three@jobsview.local": {
-		id:       uuid.MustParse("33333333-3333-4333-8333-333333333333"),
-		password: "Admin@Three2026!",
-	},
-}
-
 type Service struct {
 	repo   *Repository
 	jwt    *jwtpkg.Manager
@@ -80,9 +54,6 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest, userAgent, 
 }
 
 func (s *Service) Login(ctx context.Context, req LoginRequest, userAgent, ip string) (AuthResult, error) {
-	if result, ok, err := s.loginHardcodedAdmin(req); ok || err != nil {
-		return result, err
-	}
 	user, err := s.repo.FindUserByEmail(ctx, req.Email)
 	if errors.Is(err, ErrNotFound) {
 		_ = s.repo.RecordLogin(ctx, nil, req.Email, userAgent, ip, false, "invalid_credentials")
@@ -105,32 +76,6 @@ func (s *Service) Login(ctx context.Context, req LoginRequest, userAgent, ip str
 		_ = s.repo.TouchDevice(ctx, user.ID, userAgent, ip)
 	}
 	return result, err
-}
-
-func (s *Service) loginHardcodedAdmin(req LoginRequest) (AuthResult, bool, error) {
-	email := strings.ToLower(strings.TrimSpace(req.Email))
-	account, ok := hardcodedAdmins[email]
-	if !ok {
-		return AuthResult{}, false, nil
-	}
-	if req.Password != account.password {
-		return AuthResult{}, true, apperror.Unauthorized("Invalid email or password.")
-	}
-	access, err := s.jwt.GenerateAccess(account.id, email, "SUPER_ADMIN", hardcodedAdminPermissions)
-	if err != nil {
-		return AuthResult{}, true, apperror.Internal(err)
-	}
-	return AuthResult{
-		User: UserResponse{
-			ID:         account.id,
-			Email:      email,
-			Role:       "SUPER_ADMIN",
-			IsVerified: true,
-		},
-		AccessToken: access,
-		ExpiresAt:   time.Now().UTC().Add(s.jwt.AccessTTL()),
-		Stateless:   true,
-	}, true, nil
 }
 
 func (s *Service) Refresh(ctx context.Context, refreshToken, userAgent, ip string) (AuthResult, error) {

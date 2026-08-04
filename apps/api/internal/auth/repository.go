@@ -111,7 +111,7 @@ func (r *Repository) CreateSession(ctx context.Context, userID uuid.UUID, refres
 		return err
 	}
 
-	// Enforce limit of up to 5 concurrent devices per account: revoke older sessions beyond the newest 5
+	// Enforce limit of up to 10 concurrent devices per account: revoke older sessions beyond the newest 10
 	_, err = tx.Exec(ctx, `
 		UPDATE user_sessions
 		SET revoked_at = NOW()
@@ -119,7 +119,7 @@ func (r *Repository) CreateSession(ctx context.Context, userID uuid.UUID, refres
 			SELECT id FROM user_sessions
 			WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > NOW()
 			ORDER BY created_at DESC
-			LIMIT 5
+			LIMIT 10
 		)
 	`, userID)
 	if err != nil {

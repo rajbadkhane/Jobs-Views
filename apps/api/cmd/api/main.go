@@ -48,10 +48,7 @@ func run() error {
 
 	redisClient, err := cache.Connect(ctx, cfg.Redis)
 	if err != nil {
-		if cfg.IsProduction() {
-			return err
-		}
-		log.Warn("redis unavailable; continuing without cache in development", "error", err)
+		log.Warn("redis unavailable; continuing without cache", "error", err)
 	}
 	defer func() { _ = cache.Close(redisClient) }()
 

@@ -114,7 +114,7 @@ func Load() (Config, error) {
 		JWT: JWTConfig{
 			AccessSecret:  get("JWT_ACCESS_SECRET", get("JWT_SECRET", "")),
 			RefreshSecret: get("JWT_REFRESH_SECRET", get("JWT_SECRET", "")),
-			AccessTTL:     duration("JWT_ACCESS_TTL", 15*time.Minute),
+			AccessTTL:     duration("JWT_ACCESS_TTL", 72*time.Hour),
 			RefreshTTL:    duration("JWT_REFRESH_TTL", 7*24*time.Hour),
 			Issuer:        get("JWT_ISSUER", "jobs-view-api"),
 		},

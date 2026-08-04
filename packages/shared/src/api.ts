@@ -60,6 +60,8 @@ export type PublicJob = {
   company_logo_url?: string;
   job_type_id?: number;
   job_type?: string;
+  job_types?: string[];
+  job_types_list?: string[];
   title: string;
   slug: string;
   short_description?: string;

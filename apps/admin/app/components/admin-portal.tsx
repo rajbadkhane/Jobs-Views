@@ -1103,7 +1103,7 @@ function JobsView({ live }: { live: AdminLive }) {
             .includes(search.toLowerCase()) &&
           (status === "all" || job.status === status) &&
           (company === "all" || job.company_name === company) &&
-          (jobType === "all" || job.job_type === jobType) &&
+          (jobType === "all" || job.job_type === jobType || (job.job_types && job.job_types.includes(jobType)) || (job.job_types_list && job.job_types_list.includes(jobType))) &&
           `${job.city ?? ""} ${job.state ?? ""} ${job.country ?? ""}`
             .toLowerCase()
             .includes(location.toLowerCase()) &&
@@ -1158,7 +1158,10 @@ function JobsView({ live }: { live: AdminLive }) {
       id: "type",
       header: "Job Type",
       sortValue: (row) => row.job_type,
-      cell: (row) => (row.job_type ? titleCase(row.job_type) : ""),
+      cell: (row) => {
+        const list = row.job_types?.length ? row.job_types : row.job_types_list?.length ? row.job_types_list : row.job_type ? [row.job_type] : [];
+        return list.map((item) => titleCase(item)).join(", ");
+      },
     },
     {
       id: "mode",
@@ -1248,7 +1251,7 @@ function JobsView({ live }: { live: AdminLive }) {
               options={[
                 ["all", "All job types"],
                 ...unique(
-                  all.map((item) => item.job_type).filter(isString),
+                  all.flatMap((item) => [item.job_type, ...(item.job_types || []), ...(item.job_types_list || [])]).filter(isString),
                 ).map((value) => [value, titleCase(value)] as [string, string]),
               ]}
             />
@@ -1444,6 +1447,7 @@ function QuickPostJobForm({ live }: { live: AdminLive }) {
     country: "India",
     workMode: "on_site",
     jobType: "full-time",
+    jobTypes: ["full-time"] as string[],
     education: "",
     experienceMin: "",
     experienceMax: "",
@@ -1456,7 +1460,7 @@ function QuickPostJobForm({ live }: { live: AdminLive }) {
   const [form, setForm] = useState(blank);
   const [publicURL, setPublicURL] = useState("");
   const [error, setError] = useState("");
-  const set = (key: keyof typeof form, value: string | boolean) =>
+  const set = (key: keyof typeof form, value: string | boolean | string[]) =>
     setForm((current) => ({ ...current, [key]: value }));
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -1488,7 +1492,8 @@ function QuickPostJobForm({ live }: { live: AdminLive }) {
           state: form.state,
           country: form.country,
           work_mode: form.workMode,
-          job_type: form.jobType,
+          job_type: form.jobTypes[0] || form.jobType || "full-time",
+          job_types: form.jobTypes,
           education: form.education,
           experience_min: Number(form.experienceMin || 0),
           experience_max: Number(form.experienceMax || 0),
@@ -1628,17 +1633,6 @@ function QuickPostJobForm({ live }: { live: AdminLive }) {
               ["remote", "Remote"],
             ]}
           />
-          <Select
-            label="Job type"
-            value={form.jobType}
-            onChange={(value) => set("jobType", value)}
-            options={[
-              ["full-time", "Full time"],
-              ["part-time", "Part time"],
-              ["contract", "Contract"],
-              ["internship", "Internship"],
-            ]}
-          />
           <TextField
             label="Education"
             value={form.education}
@@ -1650,6 +1644,128 @@ function QuickPostJobForm({ live }: { live: AdminLive }) {
             value={form.openings}
             setValue={(value) => set("openings", value)}
           />
+        </div>
+        <div className="grid gap-3 rounded-[var(--radius-career-card)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span className="text-sm font-black text-[var(--cos-on-surface)] block">
+                Job Types & Categories <span className="text-xs font-semibold text-[#f59e0b]">(Multi-Select Enabled)</span>
+              </span>
+              <span className="text-xs font-medium text-[var(--cos-on-surface-variant)]">
+                Click to tag multiple employment terms, experience levels, and healthcare roles for this single job.
+              </span>
+            </div>
+            <Badge tone="verified">{form.jobTypes.length} Selected</Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3 pt-3 border-t border-[var(--cos-outline-variant)]">
+            <div className="grid gap-2">
+              <div className="text-xs font-black uppercase tracking-wider text-[#0a3a7a]">1. Employment & Terms</div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  ["full-time", "Full Time"],
+                  ["part-time", "Part Time"],
+                  ["contract", "Contract"],
+                  ["internship", "Internship"],
+                  ["freelance", "Freelance"],
+                  ["temporary", "Temporary"],
+                  ["apprenticeship", "Apprenticeship"],
+                ].map(([slug, label]) => {
+                  const active = form.jobTypes.includes(slug);
+                  return (
+                    <button
+                      key={slug}
+                      type="button"
+                      onClick={() => {
+                        const next = active
+                          ? form.jobTypes.filter((item) => item !== slug)
+                          : [...form.jobTypes, slug];
+                        setForm((curr) => ({ ...curr, jobTypes: next.length > 0 ? next : [slug], jobType: next[0] || "full-time" }));
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all duration-150 shadow-sm",
+                        active
+                          ? "bg-gradient-to-r from-[#0a3a7a] to-[#144999] text-white border-2 border-[#f59e0b] shadow-md -translate-y-0.5"
+                          : "bg-[var(--cos-surface-container-low)] text-[var(--cos-on-surface-variant)] border border-[var(--cos-outline-variant)] hover:bg-[var(--cos-surface-container-high)] hover:text-[var(--cos-on-surface)]"
+                      )}
+                    >
+                      <span>{label}</span>
+                      {active ? <span className="text-[#f59e0b] font-black">✓</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <div className="text-xs font-black uppercase tracking-wider text-[#0a3a7a]">2. Experience & Education</div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  ["10th-pass-jobs", "10th pass jobs"],
+                  ["12th-pass-jobs", "12th pass jobs"],
+                  ["iti-jobs", "ITI jobs"],
+                  ["fresher-jobs", "Fresher jobs"],
+                  ["experienced-jobs", "Experienced jobs"],
+                ].map(([slug, label]) => {
+                  const active = form.jobTypes.includes(slug);
+                  return (
+                    <button
+                      key={slug}
+                      type="button"
+                      onClick={() => {
+                        const next = active
+                          ? form.jobTypes.filter((item) => item !== slug)
+                          : [...form.jobTypes, slug];
+                        setForm((curr) => ({ ...curr, jobTypes: next.length > 0 ? next : [slug], jobType: next[0] || "full-time" }));
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all duration-150 shadow-sm",
+                        active
+                          ? "bg-gradient-to-r from-[#104899] to-[#0a3a7a] text-white border-2 border-[#f59e0b] shadow-md -translate-y-0.5"
+                          : "bg-[var(--cos-surface-container-low)] text-[var(--cos-on-surface-variant)] border border-[var(--cos-outline-variant)] hover:bg-[var(--cos-surface-container-high)] hover:text-[var(--cos-on-surface)]"
+                      )}
+                    >
+                      <span>{label}</span>
+                      {active ? <span className="text-[#f59e0b] font-black">✓</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <div className="text-xs font-black uppercase tracking-wider text-[#0a3a7a]">3. Healthcare & Remote</div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  ["nursing-home-care-job", "Nursing home care job"],
+                  ["staff-nurse-job", "Staff nurse job"],
+                  ["doctors-job", "Doctors job"],
+                  ["work-from-home-job", "Work from home job"],
+                  ["remote-jobs", "Remote jobs"],
+                ].map(([slug, label]) => {
+                  const active = form.jobTypes.includes(slug);
+                  return (
+                    <button
+                      key={slug}
+                      type="button"
+                      onClick={() => {
+                        const next = active
+                          ? form.jobTypes.filter((item) => item !== slug)
+                          : [...form.jobTypes, slug];
+                        setForm((curr) => ({ ...curr, jobTypes: next.length > 0 ? next : [slug], jobType: next[0] || "full-time" }));
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all duration-150 shadow-sm",
+                        active
+                          ? "bg-gradient-to-r from-[#0a3a7a] via-[#154b9c] to-[#0a3a7a] text-white border-2 border-[#f59e0b] shadow-md -translate-y-0.5"
+                          : "bg-[var(--cos-surface-container-low)] text-[var(--cos-on-surface-variant)] border border-[var(--cos-outline-variant)] hover:bg-[var(--cos-surface-container-high)] hover:text-[var(--cos-on-surface)]"
+                      )}
+                    >
+                      <span>{label}</span>
+                      {active ? <span className="text-[#f59e0b] font-black">✓</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
         <TextField
           label="Short description"

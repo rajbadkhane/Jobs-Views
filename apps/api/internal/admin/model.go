@@ -87,6 +87,7 @@ type AdminJob struct {
 	Openings         int        `json:"openings"`
 	WorkMode         string     `json:"work_mode"`
 	JobType          string     `json:"job_type"`
+	JobTypes         []string   `json:"job_types,omitempty"`
 	Country          string     `json:"country"`
 	State            string     `json:"state"`
 	City             string     `json:"city"`
@@ -155,6 +156,7 @@ type QuickPostJobBody struct {
 	Country          string                  `json:"country"`
 	WorkMode         string                  `json:"work_mode"`
 	JobType          string                  `json:"job_type"`
+	JobTypes         []string                `json:"job_types,omitempty"`
 	Education        string                  `json:"education"`
 	ExperienceMin    float64                 `json:"experience_min"`
 	ExperienceMax    float64                 `json:"experience_max"`

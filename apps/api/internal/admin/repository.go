@@ -369,6 +369,12 @@ func (r *Repository) QuickPostJob(ctx context.Context, req QuickPostJobRequest, 
 	if salaryBasis == "" {
 		salaryBasis = "ctc"
 	}
+	jobTypesList := req.Job.JobTypes
+	if len(jobTypesList) == 0 && req.Job.JobType != "" {
+		jobTypesList = []string{req.Job.JobType}
+	}
+	jobTypesJSON, _ := json.Marshal(jobTypesList)
+	_, _ = tx.Exec(ctx, `UPDATE jobs SET salary_period=$1,salary_basis=$2,job_types_list=coalesce($3::jsonb, '[]'::jsonb) WHERE id=$4`, salaryPeriod, salaryBasis, string(jobTypesJSON), jobID)
 	if _, err = tx.Exec(ctx, `UPDATE jobs SET salary_period=$1,salary_basis=$2 WHERE id=$3`, salaryPeriod, salaryBasis, jobID); err != nil {
 		return QuickPostJobResult{}, err
 	}
@@ -450,9 +456,19 @@ func (r *Repository) quickPostCompany(ctx context.Context, tx pgx.Tx, req QuickP
 }
 
 func (r *Repository) quickPostJobTypeID(ctx context.Context, tx pgx.Tx, slug string) (int, error) {
+	if slug == "" {
+		slug = "full-time"
+	}
 	var id int
 	err := tx.QueryRow(ctx, `SELECT id FROM job_types WHERE slug = $1`, slug).Scan(&id)
-	return id, err
+	if err != nil {
+		name := strings.ReplaceAll(slug, "-", " ")
+		_ = tx.QueryRow(ctx, `INSERT INTO job_types (name, slug) VALUES ($1, $2) ON CONFLICT (slug) DO UPDATE SET slug=EXCLUDED.slug RETURNING id`, name, slug).Scan(&id)
+	}
+	if id == 0 {
+		_ = tx.QueryRow(ctx, `SELECT id FROM job_types LIMIT 1`).Scan(&id)
+	}
+	return id, nil
 }
 
 func (r *Repository) uniqueJobSlug(ctx context.Context, tx pgx.Tx, base string) (string, error) {

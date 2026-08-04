@@ -27,6 +27,7 @@ CREATE TABLE jobs (
     function_id UUID REFERENCES job_taxonomies(id) ON DELETE SET NULL,
     department_id UUID REFERENCES company_departments(id) ON DELETE SET NULL,
     job_type_id INT REFERENCES job_types(id) ON DELETE SET NULL,
+    job_types_list JSONB DEFAULT '[]'::jsonb NOT NULL,
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(280) UNIQUE NOT NULL,
     short_description VARCHAR(500),
@@ -108,7 +109,17 @@ INSERT INTO job_types (name, slug) VALUES
 ('Internship', 'internship'),
 ('Freelance', 'freelance'),
 ('Temporary', 'temporary'),
-('Apprenticeship', 'apprenticeship')
+('Apprenticeship', 'apprenticeship'),
+('10th pass jobs', '10th-pass-jobs'),
+('12th pass jobs', '12th-pass-jobs'),
+('ITI jobs', 'iti-jobs'),
+('Fresher jobs', 'fresher-jobs'),
+('Experienced jobs', 'experienced-jobs'),
+('Nursing home care job', 'nursing-home-care-job'),
+('Staff nurse job', 'staff-nurse-job'),
+('Doctors job', 'doctors-job'),
+('Work from home job', 'work-from-home-job'),
+('Remote jobs', 'remote-jobs')
 ON CONFLICT (slug) DO NOTHING;
 
 CREATE INDEX idx_jobs_company_status ON jobs (company_id, status) WHERE deleted_at IS NULL;

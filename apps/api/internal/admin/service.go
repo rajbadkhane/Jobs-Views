@@ -109,21 +109,21 @@ func (s *Service) QuickPostJob(ctx context.Context, actor uuid.UUID, req QuickPo
 	req.Job.WorkMode = strings.TrimSpace(req.Job.WorkMode)
 	req.Job.JobType = strings.ReplaceAll(strings.TrimSpace(req.Job.JobType), "_", "-")
 
-	details := map[string]string{}
 	if req.Company.Name == "" {
-		details["company.name"] = "company name is required"
+		req.Company.Name = "Direct Hiring Partner"
 	}
 	if req.Job.Title == "" {
-		details["job.title"] = "job title is required"
+		req.Job.Title = "Immediate Hiring Opportunity"
 	}
 	if req.Job.FullDescription == "" {
-		details["job.full_description"] = "full description is required"
+		if req.Job.ShortDescription != "" {
+			req.Job.FullDescription = req.Job.ShortDescription
+		} else {
+			req.Job.FullDescription = "We are actively recruiting candidates for the position of " + req.Job.Title + ". Apply today to explore rewarding career opportunities, skill development, and competitive benefits in a supportive work environment."
+		}
 	}
-	if req.Job.WorkMode == "" {
+	if req.Job.WorkMode == "" || (req.Job.WorkMode != "remote" && req.Job.WorkMode != "hybrid" && req.Job.WorkMode != "on_site") {
 		req.Job.WorkMode = "on_site"
-	}
-	if req.Job.WorkMode != "remote" && req.Job.WorkMode != "hybrid" && req.Job.WorkMode != "on_site" {
-		details["job.work_mode"] = "must be remote, hybrid, or on_site"
 	}
 	if req.Job.JobType == "" {
 		req.Job.JobType = "full-time"
@@ -131,20 +131,20 @@ func (s *Service) QuickPostJob(ctx context.Context, actor uuid.UUID, req QuickPo
 	if req.Job.Currency == "" {
 		req.Job.Currency = "INR"
 	}
-	if req.Job.SalaryPeriod == "" {
+	if req.Job.SalaryPeriod == "" || (req.Job.SalaryPeriod != "hourly" && req.Job.SalaryPeriod != "daily" && req.Job.SalaryPeriod != "monthly" && req.Job.SalaryPeriod != "annual") {
 		req.Job.SalaryPeriod = "annual"
 	}
-	if req.Job.SalaryPeriod != "hourly" && req.Job.SalaryPeriod != "daily" && req.Job.SalaryPeriod != "monthly" && req.Job.SalaryPeriod != "annual" {
-		details["job.salary_period"] = "must be hourly, daily, monthly, or annual"
-	}
-	if req.Job.SalaryBasis == "" {
+	if req.Job.SalaryBasis == "" || (req.Job.SalaryBasis != "gross" && req.Job.SalaryBasis != "take_home" && req.Job.SalaryBasis != "ctc") {
 		req.Job.SalaryBasis = "ctc"
 	}
-	if req.Job.SalaryBasis != "gross" && req.Job.SalaryBasis != "take_home" && req.Job.SalaryBasis != "ctc" {
-		details["job.salary_basis"] = "must be gross, take_home, or ctc"
+	if req.Job.SalaryMin < 0 {
+		req.Job.SalaryMin = 0
 	}
-	if req.Job.SalaryMin < 0 || req.Job.SalaryMax < 0 || (req.Job.SalaryMin > 0 && req.Job.SalaryMax > 0 && req.Job.SalaryMin > req.Job.SalaryMax) {
-		details["job.salary"] = "must be a valid non-negative range"
+	if req.Job.SalaryMax < 0 {
+		req.Job.SalaryMax = 0
+	}
+	if req.Job.SalaryMin > 0 && req.Job.SalaryMax > 0 && req.Job.SalaryMin > req.Job.SalaryMax {
+		req.Job.SalaryMin, req.Job.SalaryMax = req.Job.SalaryMax, req.Job.SalaryMin
 	}
 	if req.Job.Country == "" {
 		req.Job.Country = "India"
@@ -162,9 +162,6 @@ func (s *Service) QuickPostJob(ctx context.Context, actor uuid.UUID, req QuickPo
 		if req.Job.Skills[i].Level == "" {
 			req.Job.Skills[i].Level = "intermediate"
 		}
-	}
-	if len(details) > 0 {
-		return QuickPostJobResult{}, apperror.Validation(details)
 	}
 
 	item, err := s.repo.QuickPostJob(ctx, req, actor)

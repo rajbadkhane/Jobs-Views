@@ -1533,7 +1533,6 @@ function QuickPostJobForm({ live }: { live: AdminLive }) {
             label="Company"
             value={form.companyName}
             setValue={(value) => set("companyName", value)}
-            required
           />
           <TextField
             label="Website"
@@ -1561,7 +1560,6 @@ function QuickPostJobForm({ live }: { live: AdminLive }) {
             label="Job title"
             value={form.title}
             setValue={(value) => set("title", value)}
-            required
           />
           <TextField
             label="City"
@@ -1776,7 +1774,6 @@ function QuickPostJobForm({ live }: { live: AdminLive }) {
           label="Full description"
           value={form.fullDescription}
           setValue={(value) => set("fullDescription", value)}
-          required
         />
         <div className="grid gap-3 lg:grid-cols-3">
           <TextArea

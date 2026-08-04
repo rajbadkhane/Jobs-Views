@@ -79,7 +79,7 @@ export function OurServicesClient() {
               <Sparkles size={14} className="text-amber-400 fill-current" /> Jobs View Enterprise &amp; Commercial Solutions
             </span>
             <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-6xl text-white">
-              Powering India's Career Ecosystem <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-300 to-amber-500">Beyond Job Searching</span>
+              Powering India&apos;s Career Ecosystem <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-300 to-amber-500">Beyond Job Searching</span>
             </h1>
             <p className="mt-6 text-lg sm:text-xl text-slate-300 leading-8 max-w-3xl mx-auto">
               From commercial business &amp; software acquisitions to executive training bootcamps, real-time news intelligence, and high-velocity recruitment marketing funnels.

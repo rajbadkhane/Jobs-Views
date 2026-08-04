@@ -82,7 +82,7 @@ export function SellPurchasingClient() {
               Sell or Acquire <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500">Recruitment Assets</span> &amp; Businesses
             </h1>
             <p className="mt-6 text-lg text-slate-300 leading-8">
-              India's specialized commercial marketplace for recruitment firms, HR software IP, client billing portfolios, and verified databases. Supported by rigorous legal due diligence and zero-leak anonymity escrow.
+              India&apos;s specialized commercial marketplace for recruitment firms, HR software IP, client billing portfolios, and verified databases. Supported by rigorous legal due diligence and zero-leak anonymity escrow.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <a

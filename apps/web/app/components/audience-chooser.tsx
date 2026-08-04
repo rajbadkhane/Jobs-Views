@@ -58,7 +58,15 @@ export function AudienceChooser({ onContinue }: { onContinue: () => void }) {
   }, [onContinue]);
 
   function chooseEmployer() {
-    document.cookie = "jobsview_audience=employer; Path=/; SameSite=Lax";
+    document.cookie = "jobsview_audience=employer; Path=/; SameSite=Lax; max-age=31536000";
+    if (typeof window !== "undefined") {
+      try { localStorage.setItem("jobsview_audience_seen", "true"); } catch {}
+      fetch("/api/audience-cache", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audience: "employer" })
+      }).catch(() => {});
+    }
     window.location.assign(`${appConfig.employerUrl.replace(/\/$/, "")}/employer/login`);
   }
 

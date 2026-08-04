@@ -100,16 +100,16 @@ export function Button({ className, variant = "primary", size = "md", loading = 
         "after:pointer-events-none after:absolute after:inset-0 after:scale-0 after:rounded-[inherit] after:bg-white/20 after:opacity-0 after:transition after:duration-[120ms] active:after:scale-100 active:after:opacity-100",
         "active:scale-[0.98]",
         "disabled:pointer-events-none disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500 disabled:opacity-70 disabled:transition-opacity dark:disabled:border-slate-800 dark:disabled:bg-slate-800 dark:disabled:text-slate-500",
-        variant === "primary" && "border-[var(--cos-primary-container)] bg-[var(--cos-primary-container)] text-white shadow-career-sm hover:-translate-y-px hover:bg-[var(--cos-primary)] hover:shadow-career-hover active:translate-y-0",
-        variant === "secondary" && "border-[var(--cos-outline-variant)] bg-[color-mix(in_srgb,var(--cos-secondary-container)_8%,var(--cos-surface-container-lowest))] text-[var(--cos-secondary)] hover:-translate-y-px hover:border-[var(--cos-secondary)] hover:bg-[color-mix(in_srgb,var(--cos-secondary-container)_14%,var(--cos-surface-container-lowest))] active:translate-y-0",
-        variant === "outline" && "border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] text-[var(--cos-on-surface)] hover:-translate-y-px hover:border-[var(--cos-border-hover)] hover:bg-[var(--cos-surface-container-low)]",
-        variant === "ghost" && "border-transparent bg-transparent text-[var(--cos-on-surface-variant)] hover:bg-[var(--cos-surface-container-low)] hover:text-[var(--cos-on-surface)]",
+        variant === "primary" && "border-b-2 border-[#f59e0b] bg-gradient-to-r from-[#0a3a7a] via-[#104899] to-[#0a3a7a] text-white font-bold shadow-md hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-lg active:translate-y-0 transition-all duration-200",
+        variant === "secondary" && "border border-amber-500/50 bg-gradient-to-r from-amber-500/10 to-[#f59e0b]/5 text-amber-600 dark:text-amber-400 font-extrabold hover:-translate-y-px hover:border-amber-500 hover:bg-amber-500/20 active:translate-y-0 shadow-2xs transition-all",
+        variant === "outline" && "border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] font-semibold text-[var(--cos-on-surface)] hover:-translate-y-px hover:border-[#0a3a7a] dark:hover:border-amber-400 hover:bg-[var(--cos-surface-container-low)] transition-all",
+        variant === "ghost" && "border-transparent bg-transparent text-[var(--cos-on-surface-variant)] hover:bg-[var(--cos-surface-container-low)] hover:text-[#0a3a7a] dark:hover:text-amber-400 transition-colors",
         variant === "danger" && "border-[var(--cos-error)] bg-[var(--cos-error)] text-white shadow-career-sm hover:brightness-95 active:translate-y-px",
         variant === "success" && "border-emerald-600 bg-emerald-600 text-white shadow-career-sm hover:-translate-y-px hover:bg-emerald-700",
         variant === "warning" && "border-amber-500 bg-amber-500 text-white shadow-career-sm hover:-translate-y-px hover:bg-amber-600",
         variant === "info" && "border-[#0A3A7A] bg-[#0A3A7A] text-white shadow-career-sm hover:-translate-y-px hover:bg-[#082E61]",
-        variant === "gradient" && "border-transparent bg-[linear-gradient(135deg,#0A3A7A,#F59E0B)] text-white shadow-career-md hover:-translate-y-0.5 hover:shadow-career-hover active:scale-95",
-        variant === "floating" && "rounded-full border-[var(--cos-primary-container)] bg-[var(--cos-primary-container)] text-white shadow-career-floating hover:-translate-y-0.5 hover:bg-[var(--cos-primary)]",
+        variant === "gradient" && "border-transparent bg-gradient-to-r from-[#0a3a7a] via-indigo-600 to-[#f59e0b] text-white font-black shadow-lg hover:-translate-y-0.5 hover:shadow-xl active:scale-95 transition-all duration-200",
+        variant === "floating" && "rounded-full border border-amber-500/40 bg-gradient-to-r from-[#0a3a7a] via-indigo-900 to-[#f59e0b] text-white shadow-career-floating hover:-translate-y-0.5 hover:shadow-xl transition-all duration-200",
         size === "xs" && "h-7 px-2.5 text-xs",
         size === "sm" && "h-8 px-3",
         size === "md" && "h-10 px-4",
@@ -262,7 +262,7 @@ export function Card({ className, ...props }: React.ComponentPropsWithoutRef<typ
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       whileHover={reduceMotion ? undefined : { y: -3, scale: 1.01, boxShadow: "0 12px 30px rgba(0,0,0,0.06)" }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className={cn("rounded-[var(--radius-career-card)] border p-5 shadow-career-sm transition-[border-color,box-shadow] duration-[160ms] ease-out hover:border-[var(--cos-primary-container)] dark:shadow-none", surfaceClass, className)}
+      className={cn("rounded-[var(--radius-career-card)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] p-5 shadow-career-sm transition-all duration-200 ease-out hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/5 dark:shadow-none", surfaceClass, className)}
       {...props}
     />
   );
@@ -273,7 +273,7 @@ export function Badge({ className, tone = "neutral", pulse = false, ...props }: 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold leading-4 transition duration-[120ms] hover:scale-[1.02]",
+        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold leading-4 transition duration-[120ms] hover:scale-[1.05]",
         pulse && "animate-pulse",
         normalizedTone === "neutral" && "border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-low)] text-[var(--cos-on-surface-variant)]",
         normalizedTone === "success" && "border-emerald-200 bg-emerald-50 text-[var(--cos-success-text)] dark:border-emerald-900/70 dark:bg-emerald-950/40",
@@ -729,14 +729,14 @@ export function UploadManager({ title, description, progress = 0, fileName, onRe
 
 export function EnterpriseCard({ title, description, icon, badge, actions, children, className, disabled = true }: { title: string; description?: string; icon?: React.ReactNode; badge?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; className?: string; disabled?: boolean }) {
   return (
-    <Card className={cn("group relative overflow-hidden", disabled && "cursor-default", className)} aria-disabled={disabled ? true : undefined}>
-      <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#0A3A7A,#F59E0B)] opacity-80" aria-hidden="true" />
+    <Card className={cn("group relative overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-xl", disabled && "cursor-default", className)} aria-disabled={disabled ? true : undefined}>
+      <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#0a3a7a] via-indigo-600 to-[#f59e0b] opacity-90 transition-all duration-200 group-hover:h-2 group-hover:opacity-100" aria-hidden="true" />
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          {icon ? <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-career-button)] bg-[var(--cos-surface-container-low)] text-[var(--cos-primary)]">{icon}</span> : null}
+        <div className="flex min-w-0 items-start gap-3.5">
+          {icon ? <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#0a3a7a]/20 bg-gradient-to-br from-[#0a3a7a]/10 via-[#0a3a7a]/5 to-[#f59e0b]/10 text-[#0a3a7a] dark:text-amber-400 dark:border-amber-500/30 transition-all duration-200 group-hover:bg-gradient-to-br group-hover:from-[#0a3a7a] group-hover:to-[#f59e0b] group-hover:text-white group-hover:shadow-md">{icon}</span> : null}
           <div className="min-w-0">
-            <h3 className="truncate text-base font-semibold">{title}</h3>
-            {description ? <p className={cn("mt-1 text-sm", mutedText)}>{description}</p> : null}
+            <h3 className="truncate text-base font-black tracking-tight text-slate-950 dark:text-white group-hover:text-[#0a3a7a] dark:group-hover:text-amber-400 transition-colors">{title}</h3>
+            {description ? <p className={cn("mt-1 text-sm font-medium", mutedText)}>{description}</p> : null}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">{badge}{actions}</div>

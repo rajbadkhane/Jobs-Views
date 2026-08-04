@@ -1,6 +1,8 @@
 import React from "react";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+
+import { getAudienceFromRedis } from "./api/audience-cache/upstash";
 
 import { appConfig } from "@career-os/config";
 import { breadcrumbSchema, buildMetadata, organizationSchema, webPageSchema, websiteSchema } from "@career-os/shared";
@@ -25,8 +27,21 @@ export const metadata: Metadata = {
   }
 };
 
-export default function Page() {
-  const showAudienceChooser = !cookies().has("jobsview_audience");
+export default async function Page() {
+  let showAudienceChooser = !cookies().has("jobsview_audience");
+  if (showAudienceChooser) {
+    try {
+      const h = headers();
+      const xForwardedFor = h.get("x-forwarded-for");
+      const ip = xForwardedFor ? xForwardedFor.split(",")[0]?.trim() : (h.get("cf-connecting-ip") || h.get("x-real-ip") || "anonymous");
+      if (ip && ip !== "anonymous" && ip !== "127.0.0.1" && ip !== "::1") {
+        const cached = await getAudienceFromRedis(ip);
+        if (cached) showAudienceChooser = false;
+      }
+    } catch {
+      // Fallback if Redis is unreachable
+    }
+  }
   const structuredData = [
     websiteSchema(),
     organizationSchema(),

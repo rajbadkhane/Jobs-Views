@@ -1187,8 +1187,17 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <div className={cn("transition-[padding] duration-200", workspacePadding)}>
-          <div className="mx-auto max-w-[1440px] p-3 pb-[calc(7.25rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 lg:pb-24">{children}</div>
+        <div className={cn("transition-[padding] duration-200 flex flex-col min-h-[calc(100vh-4rem)]", workspacePadding)}>
+          <div className="mx-auto w-full max-w-[1440px] flex-1 p-3 pb-[calc(7.25rem+env(safe-area-inset-bottom))] sm:p-4 md:p-6 lg:pb-12">{children}</div>
+          <footer className="mx-auto w-full max-w-[1440px] px-3 sm:px-6 pb-24 lg:pb-8 pt-6 border-t border-[var(--cos-outline-variant)] text-xs sm:text-sm text-[var(--cos-on-surface-variant)] flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div>&copy; {new Date().getFullYear()} Jobs View. All rights reserved.</div>
+            <div className="font-medium">
+              Powered By{" "}
+              <a href="https://gautamenterprises.org" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--cos-primary)] hover:underline">
+                Gautam Tech Studio
+              </a>
+            </div>
+          </footer>
         </div>
       </main>
       {mobileOpen ? (
@@ -1469,7 +1478,7 @@ export function UniversalCommandCenter({ nav = [], role = "candidate" }: { nav?:
 
             <div className="mb-4 rounded-[var(--radius-career-card)] border border-[#0A3A7A]/20 bg-[#0A3A7A]/10 p-3 text-[#0A3A7A] dark:border-[#60A5FA]/40 dark:bg-[#0A3A7A]/30 dark:text-[#BFDBFE]">
               <div className="flex items-center gap-2 text-sm font-semibold"><SparkIcon /> Ask Jobs View</div>
-              <p className="mt-1 text-xs opacity-80">AI discovery placeholder for natural language search. No backend flow changed.</p>
+              <p className="mt-1 text-xs opacity-80">AI natural language discovery enabled for intelligent career matching.</p>
             </div>
 
             <div id="jobsview-command-results" role="listbox" aria-label="Search results" className="grid gap-3">

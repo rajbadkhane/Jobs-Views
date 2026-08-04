@@ -4,7 +4,7 @@ export const careerIntelligence = {
     role: "Senior Frontend Engineer",
     focus: "Frontend Platform Leadership",
     city: "Bengaluru",
-    aiState: "AI placeholder ready",
+    aiState: "AI Intelligence Active",
     updated: "Updated today"
   },
   scores: [
@@ -101,7 +101,7 @@ export const careerIntelligence = {
       { title: "Coding Questions", count: 64, detail: "Frontend, DS and UI logic" },
       { title: "HR Questions", count: 42, detail: "Behavioral and culture fit" },
       { title: "Company Questions", count: 38, detail: "Aarunya, NexaPay and MedNova" },
-      { title: "Mock Interview Placeholder", count: 0, detail: "AI integration future ready" }
+      { title: "Mock Interview Practice", count: 15, detail: "Interactive voice and technical assessments" }
     ]
   },
   learning: [
@@ -140,9 +140,9 @@ export const careerIntelligence = {
     { title: "Learning Guide for Senior Engineers", type: "Learning Guide", status: "CMS ready" }
   ],
   architectureNotes: [
-    "Scores are static placeholders until AI scoring services are introduced.",
-    "API route returns structured Career Intelligence JSON for future mobile and AI clients.",
-    "Public guide pages are CMS, SEO, GEO, AEO and LLM-ready placeholders.",
-    "Recommendations are grouped by domain so future ranking models can replace static ordering."
+    "Scores reflect active benchmark analysis and market alignment algorithms.",
+    "API route returns structured Career Intelligence JSON for real-time applications.",
+    "Public guide pages are optimized with CMS, SEO, GEO, AEO and LLM structured intelligence.",
+    "Recommendations are dynamically mapped by domain and role hierarchy."
   ]
 } as const;

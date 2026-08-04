@@ -131,7 +131,7 @@ export const defaultJoiningWorkflow: JoiningStep[] = [
   { key: "verification", label: "Verification", status: "pending" },
   { key: "joining_date", label: "Joining Date", status: "pending" },
   { key: "joined", label: "Joined", status: "pending" },
-  { key: "probation", label: "Probation Placeholder", status: "pending" },
+  { key: "probation", label: "Probation Review", status: "pending" },
   { key: "completed", label: "Completed", status: "pending" }
 ];
 

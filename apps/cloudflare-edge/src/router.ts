@@ -1,14 +1,22 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { Env } from "./db";
+import { AppEnv } from "./middleware";
 import { authRouter } from "./handlers/auth_handler";
+import { usersRouter, adminUsersRouter } from "./handlers/users_handler";
+import { profilesRouter } from "./handlers/profiles_handler";
+import { companiesRouter, adminCompaniesRouter } from "./handlers/companies_handler";
 import { jobsRouter, adminJobsRouter } from "./handlers/jobs_handler";
+import { applicationsRouter } from "./handlers/applications_handler";
+import { salaryRouter, adminSalaryRouter } from "./handlers/salary_handler";
+import { adminRouter } from "./handlers/admin_handler";
+import { subscriptionsRouter, checkoutRouter } from "./handlers/subscriptions_handler";
+import { contentRouter } from "./handlers/content_handler";
 import { healthRouter } from "./handlers/health_handler";
 
-export const app = new Hono<{ Bindings: Env }>();
+export const app = new Hono<AppEnv>();
 
 /**
- * Configure comprehensive CORS handling for production domains, Vercel preview subdomains, and local dev environments
+ * Global CORS protection allowing Jobs Views web domains, admin portal, Vercel previews, and localhost environments
  */
 app.use("*", cors({
   origin: (origin, c) => {
@@ -48,22 +56,62 @@ app.use("*", cors({
   maxAge: 86400,
 }));
 
-// Mount native Cloudflare Edge Serverless Routes
+// 1. Authentication & Tokens
 app.route("/api/v1/auth", authRouter);
 app.route("/auth", authRouter);
 
+// 2. Users & Admin User Moderation
+app.route("/api/v1/users", usersRouter);
+app.route("/users", usersRouter);
+app.route("/api/v1/admin/users", adminUsersRouter);
+app.route("/admin/users", adminUsersRouter);
+
+// 3. Profiles (Candidate, Employer, Admin & Skills)
+app.route("/api/v1/profiles", profilesRouter);
+app.route("/profiles", profilesRouter);
+
+// 4. Companies & Admin Company Moderation
+app.route("/api/v1/companies", companiesRouter);
+app.route("/companies", companiesRouter);
+app.route("/api/v1/admin/companies", adminCompaniesRouter);
+app.route("/admin/companies", adminCompaniesRouter);
+
+// 5. Jobs & Admin Job Moderation
 app.route("/api/v1/jobs", jobsRouter);
 app.route("/jobs", jobsRouter);
-
 app.route("/api/v1/admin/jobs", adminJobsRouter);
 app.route("/admin/jobs", adminJobsRouter);
 
+// 6. Job Applications Pipeline
+app.route("/api/v1/applications", applicationsRouter);
+app.route("/applications", applicationsRouter);
+
+// 7. Salary Benchmarking & Imports
+app.route("/api/v1/salary", salaryRouter);
+app.route("/salary", salaryRouter);
+app.route("/api/v1/admin/salary", adminSalaryRouter);
+app.route("/admin/salary", adminSalaryRouter);
+
+// 8. Super Admin Analytics, CMS & Settings
+app.route("/api/v1/admin", adminRouter);
+app.route("/admin", adminRouter);
+
+// 9. Subscriptions & Razorpay Checkout
+app.route("/api/v1/subscriptions", subscriptionsRouter);
+app.route("/subscriptions", subscriptionsRouter);
+app.route("/api/v1", checkoutRouter);
+app.route("/", checkoutRouter);
+
+// 10. Content & Programmatic SEO
+app.route("/api/v1/content", contentRouter);
+app.route("/content", contentRouter);
+
+// 11. Edge Probes & Health Checks
 app.route("/api/v1", healthRouter);
 app.route("/", healthRouter);
 
 /**
- * Progressive migration fallback proxy:
- * Forward any un-migrated complex endpoints (e.g. bulk salary import, razorpay webhooks) seamlessly to legacy Render backend
+ * Universal graceful proxy fallback for unhandled custom edge queries
  */
 app.all("*", async (c) => {
   try {
@@ -90,7 +138,7 @@ app.all("*", async (c) => {
         success: false,
         error: {
           code: 503,
-          message: "Legacy backend service is currently sleeping or suspended. Native edge routes remain 100% operational.",
+          message: "All native serverless feature endpoints are operational. Unmapped query fallback reached end of chain.",
           details: error.message,
         },
       },

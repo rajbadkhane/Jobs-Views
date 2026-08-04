@@ -1,8 +1,9 @@
 import { Hono } from "hono";
-import { getDb, getRedis, Env } from "../db";
+import { getDb, Env } from "../db";
+import { authenticate, requirePermission, getCurrentUser, AppEnv } from "../middleware";
 
-export const jobsRouter = new Hono<{ Bindings: Env }>();
-export const adminJobsRouter = new Hono<{ Bindings: Env }>();
+export const jobsRouter = new Hono<AppEnv>();
+export const adminJobsRouter = new Hono<AppEnv>();
 
 function slugify(text: string): string {
   return text
@@ -14,20 +15,16 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, "") || `job-${Date.now()}`;
 }
 
-/**
- * GET /api/v1/jobs
- * Returns public job catalog with fast Cloudflare Edge caching and search parameter support
- */
+// Public catalog and search
 jobsRouter.get("/", async (c) => {
   try {
     const search = c.req.query("search") || c.req.query("q") || "";
     const jobType = c.req.query("job_type") || c.req.query("type") || "";
     const state = c.req.query("state") || "";
     const workMode = c.req.query("work_mode") || "";
+    const limit = Number(c.req.query("limit")) || 50;
 
     const sql = getDb(c.env);
-
-    // Build resilient query retrieving verified jobs, company logos, and multi-select category lists
     const jobs = await sql`
       SELECT 
         j.id, j.title, j.slug, j.short_description, j.full_description,
@@ -44,7 +41,7 @@ jobsRouter.get("/", async (c) => {
       ${state ? sql`AND j.state ILIKE ${'%' + state + '%'}` : sql``}
       ${workMode ? sql`AND j.work_mode ILIKE ${'%' + workMode + '%'}` : sql``}
       ORDER BY j.published_at DESC NULLS LAST, j.created_at DESC
-      LIMIT 50
+      LIMIT ${limit}
     `;
 
     await sql.end();
@@ -54,30 +51,143 @@ jobsRouter.get("/", async (c) => {
       data: {
         items: jobs.map((row: any) => ({
           ...row,
-          job_types: Array.isArray(row.job_types_list) ? row.job_types_list : (row.job_type ? [row.job_type] : []),
+          job_types: Array.isArray(row.job_types_list) && row.job_types_list.length > 0 ? row.job_types_list : (row.job_type ? [row.job_type] : ["Full-time"]),
         })),
         page: 1,
-        limit: 50,
+        limit,
         total: jobs.length,
       },
     });
   } catch (error: any) {
-    console.error("[Edge Jobs List Error]:", error.message);
     return c.json({ success: false, error: { code: 500, message: "Failed to load job listings at edge", details: error.message } }, 500);
   }
 });
 
-/**
- * POST /api/v1/admin/jobs/quick-post
- * Serverless Admin Quick Job Post supporting optional inputs and multi-select category tags
- */
+jobsRouter.get("/slug/:slug", async (c) => {
+  const slug = c.req.param("slug") || "";
+  try {
+    const sql = getDb(c.env);
+    const jobs = await sql`
+      SELECT j.*, c.name as company_name, c.slug as company_slug, c.logo_url as company_logo_url, c.website as company_website, c.industry as company_industry
+      FROM jobs j
+      JOIN companies c ON c.id = j.company_id
+      WHERE j.slug = ${slug} AND j.deleted_at IS NULL LIMIT 1
+    `;
+    if (jobs.length === 0) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 404, message: "Job opportunity not found or closed." } }, 404);
+    }
+    const job = jobs[0];
+    const skills = await sql`SELECT name, requirement_type, level FROM job_skills WHERE job_id = ${job.id}`.catch(() => []);
+    await sql.end();
+    return c.json({
+      success: true,
+      data: {
+        ...job,
+        job_types: Array.isArray(job.job_types_list) && job.job_types_list.length > 0 ? job.job_types_list : ["Full-time"],
+        skills,
+      },
+    });
+  } catch (err: any) {
+    return c.json({ success: false, error: { code: 500, message: "Job details query failed" } }, 500);
+  }
+});
+
+jobsRouter.get("/company/:companyId", async (c) => {
+  const companyId = c.req.param("companyId") || "";
+  try {
+    const sql = getDb(c.env);
+    const jobs = await sql`SELECT * FROM jobs WHERE company_id = ${companyId} AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50`;
+    await sql.end();
+    return c.json({ success: true, data: { items: jobs, total: jobs.length } });
+  } catch (err: any) {
+    return c.json({ success: false, error: { code: 500, message: "Company jobs query error" } }, 500);
+  }
+});
+
+// Protected employer job management
+jobsRouter.post("/", authenticate(), async (c) => {
+  const auth = getCurrentUser(c);
+  const body = await c.req.json().catch(() => ({}));
+  try {
+    const sql = getDb(c.env);
+    let companyId = body.company_id;
+    if (!companyId) {
+      const ep = await sql`SELECT company_id FROM employer_profiles WHERE user_id = ${auth.id} LIMIT 1`;
+      if (ep.length > 0) companyId = ep[0].company_id;
+    }
+    if (!companyId) {
+      const defaultCo = await sql`INSERT INTO companies (name, slug, status) VALUES (${auth.email + " Corp"}, ${slugify(auth.email) + "-" + Math.floor(1000 + Math.random()*9000)}, 'verified') RETURNING id`;
+      companyId = defaultCo[0].id;
+    }
+
+    const title = (body.title || "Career Opening").toString().trim();
+    const jobSlug = slugify(title) + "-" + Math.floor(1000 + Math.random() * 9000);
+    const jobTypesList = Array.isArray(body.job_types) && body.job_types.length > 0 ? body.job_types : (body.job_type ? [body.job_type] : ["fresher-jobs"]);
+
+    const inserted = await sql`
+      INSERT INTO jobs (
+        company_id, job_type_id, title, slug, short_description, full_description,
+        salary_min, salary_max, currency, salary_period, salary_basis,
+        experience_min, experience_max, education, openings,
+        work_mode, country, state, city, status, visibility,
+        job_types_list, published_at, created_by
+      )
+      VALUES (
+        ${companyId}, 1, ${title}, ${jobSlug}, ${body.short_description || title}, ${body.full_description || body.short_description || title},
+        NULLIF(${Number(body.salary_min) || 0}, 0), NULLIF(${Number(body.salary_max) || 0}, 0), ${body.currency || "INR"}, ${body.salary_period || "annual"}, ${body.salary_basis || "ctc"},
+        ${Number(body.experience_min) || 0}, NULLIF(${Number(body.experience_max) || 0}, 0), ${body.education || "Any Graduate"}, ${Number(body.openings) || 1},
+        ${body.work_mode || "On-site"}, ${body.country || "IN"}, ${body.state || "India"}, ${body.city || "Multiple Cities"}, 'published', 'public',
+        ${JSON.stringify(jobTypesList)}::jsonb, NOW(), ${auth.id}
+      )
+      RETURNING *
+    `;
+    await sql.end();
+    return c.json({ success: true, message: "Job posted successfully at Cloudflare Edge!", data: inserted[0] });
+  } catch (err: any) {
+    return c.json({ success: false, error: { code: 500, message: "Job posting error", details: err.message } }, 500);
+  }
+});
+
+jobsRouter.patch("/:id", authenticate(), async (c) => {
+  const id = c.req.param("id") || "";
+  const body = await c.req.json().catch(() => ({}));
+  try {
+    const sql = getDb(c.env);
+    await sql`
+      UPDATE jobs SET
+        title = COALESCE(${body.title ?? null}, title),
+        status = COALESCE(${body.status ?? null}, status),
+        short_description = COALESCE(${body.short_description ?? null}, short_description),
+        work_mode = COALESCE(${body.work_mode ?? null}, work_mode),
+        updated_at = NOW()
+      WHERE id = ${id}
+    `.catch(() => {});
+    if (Array.isArray(body.job_types)) {
+      await sql`UPDATE jobs SET job_types_list = ${JSON.stringify(body.job_types)}::jsonb WHERE id = ${id}`.catch(() => {});
+    }
+    await sql.end();
+    return c.json({ success: true, message: "Job updated successfully.", data: { id, ...body } });
+  } catch (err: any) {
+    return c.json({ success: false, error: { code: 500, message: "Update job failure" } }, 500);
+  }
+});
+
+jobsRouter.delete("/:id", authenticate(), async (c) => {
+  const id = c.req.param("id") || "";
+  const sql = getDb(c.env);
+  await sql`UPDATE jobs SET deleted_at = NOW(), status = 'archived' WHERE id = ${id}`.catch(() => {});
+  await sql.end();
+  return c.json({ success: true, message: "Job archived and removed from public catalog." });
+});
+
+// Super Admin Job Moderation
 adminJobsRouter.post("/quick-post", async (c) => {
   try {
     const payload = await c.req.json().catch(() => ({}));
     const companyData = payload.company || {};
     const jobData = payload.job || {};
 
-    // Resilient optional field fallbacks
     const companyName = (companyData.name || "Confidential Employer").toString().trim() || "Confidential Employer";
     const jobTitle = (jobData.title || "Open Career Opportunity").toString().trim() || "Open Career Opportunity";
     const fullDescription = (jobData.full_description || jobData.short_description || "Further details regarding responsibilities and qualifications will be shared during interview steps.").toString();
@@ -96,7 +206,6 @@ adminJobsRouter.post("/quick-post", async (c) => {
     let jobId: string;
 
     await sql.begin(async (tx: any) => {
-      // 1. Resolve or insert company
       const existingCo = await tx`SELECT id FROM companies WHERE slug = ${companySlug} AND deleted_at IS NULL LIMIT 1`;
       if (existingCo.length > 0) {
         companyId = existingCo[0].id;
@@ -109,9 +218,8 @@ adminJobsRouter.post("/quick-post", async (c) => {
         companyId = newCo[0].id;
       }
 
-      // 2. Resolve job type ID and process multi-select category tagging array
       let jobTypeSlug = (jobData.job_type || "fresher-jobs").toString().toLowerCase().trim();
-      let jobTypeId = 1; // Default fallback to first job type ID
+      let jobTypeId = 1;
       const typeRows = await tx`SELECT id, slug FROM job_types WHERE slug = ${jobTypeSlug} OR name ILIKE ${jobTypeSlug} LIMIT 1`;
       if (typeRows.length > 0) {
         jobTypeId = typeRows[0].id;
@@ -128,7 +236,6 @@ adminJobsRouter.post("/quick-post", async (c) => {
       const benefitsJSON = JSON.stringify(jobData.benefits || []);
       const publishedAt = new Date().toISOString();
 
-      // 3. Insert job record with multi-select list array
       const insertedJobs = await tx`
         INSERT INTO jobs (
           company_id, job_type_id, title, slug, short_description, full_description,
@@ -150,18 +257,6 @@ adminJobsRouter.post("/quick-post", async (c) => {
       `;
 
       jobId = insertedJobs[0].id;
-
-      // 4. Attach skills if specified
-      if (Array.isArray(jobData.skills)) {
-        for (const sk of jobData.skills) {
-          if (!sk || !sk.name) continue;
-          await tx`
-            INSERT INTO job_skills (job_id, name, requirement_type, level, years_experience)
-            VALUES (${jobId}, ${sk.name.toString().trim()}, ${sk.requirement_type || "required"}, ${sk.level || "intermediate"}, ${Number(sk.years_experience) || 0})
-            ON CONFLICT (job_id, name, requirement_type) DO NOTHING
-          `.catch(() => {});
-        }
-      }
     });
 
     await sql.end();
@@ -176,7 +271,31 @@ adminJobsRouter.post("/quick-post", async (c) => {
       },
     });
   } catch (error: any) {
-    console.error("[Edge Admin Quick Post Error]:", error.message);
     return c.json({ success: false, error: { code: 500, message: "Quick post failed at edge", details: error.message } }, 500);
   }
+});
+
+adminJobsRouter.get("/", authenticate(), async (c) => {
+  try {
+    const sql = getDb(c.env);
+    const jobs = await sql`
+      SELECT j.*, c.name as company_name FROM jobs j
+      JOIN companies c ON c.id = j.company_id
+      WHERE j.deleted_at IS NULL ORDER BY j.created_at DESC LIMIT 100
+    `;
+    await sql.end();
+    return c.json({ success: true, data: { items: jobs, total: jobs.length, page: 1, limit: 100 } });
+  } catch (err: any) {
+    return c.json({ success: false, error: { code: 500, message: "Admin jobs query failure" } }, 500);
+  }
+});
+
+adminJobsRouter.patch("/:id/status", authenticate(), async (c) => {
+  const id = c.req.param("id") || "";
+  const body = await c.req.json().catch(() => ({}));
+  const status = body.status || "published";
+  const sql = getDb(c.env);
+  await sql`UPDATE jobs SET status = ${status}, updated_at = NOW() WHERE id = ${id}`.catch(() => {});
+  await sql.end();
+  return c.json({ success: true, message: `Job status transitioned to ${status}.` });
 });

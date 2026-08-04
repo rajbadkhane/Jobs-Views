@@ -97,11 +97,36 @@ func (r *Repository) FindUserByID(ctx context.Context, id uuid.UUID) (User, erro
 }
 
 func (r *Repository) CreateSession(ctx context.Context, userID uuid.UUID, refreshToken, userAgent, ip string, expiresAt time.Time) error {
-	_, err := r.db.Exec(ctx, `
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	_, err = tx.Exec(ctx, `
 		INSERT INTO user_sessions (user_id, refresh_token_hash, user_agent, ip_address, expires_at)
 		VALUES ($1, $2, $3, NULLIF($4, '')::inet, $5)
 	`, userID, hashToken(refreshToken), userAgent, ip, expiresAt)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Enforce limit of up to 5 concurrent devices per account: revoke older sessions beyond the newest 5
+	_, err = tx.Exec(ctx, `
+		UPDATE user_sessions
+		SET revoked_at = NOW()
+		WHERE user_id = $1 AND revoked_at IS NULL AND id NOT IN (
+			SELECT id FROM user_sessions
+			WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > NOW()
+			ORDER BY created_at DESC
+			LIMIT 5
+		)
+	`, userID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *Repository) RecordLogin(ctx context.Context, userID *uuid.UUID, email, userAgent, ip string, success bool, reason string) error {

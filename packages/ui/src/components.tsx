@@ -624,6 +624,8 @@ type ErrorStateProps = {
 export function ErrorState({ error, title, description, onRetry, retrying = false, backHref, backLabel = "Go back", compact = false }: ErrorStateProps) {
   const presentation = errorPresentation(error);
   const Icon = presentation.kind === "offline" ? WifiOff : presentation.kind === "missing" ? FileQuestion : presentation.kind === "forbidden" ? ShieldCheck : AlertCircle;
+  const isUnauthorized = presentation.kind === "unauthorized";
+  const signInUrl = typeof window !== "undefined" && window.location.pathname.startsWith("/admin") ? "/admin/login" : "/login";
   return (
     <div role="alert" aria-live="assertive">
       <EmptyState
@@ -631,7 +633,13 @@ export function ErrorState({ error, title, description, onRetry, retrying = fals
         icon={<Icon size={19} />}
         title={title ?? presentation.title}
         description={description ?? presentation.description}
-        action={onRetry || backHref ? (
+        action={isUnauthorized ? (
+          <div className="flex flex-wrap justify-center gap-3 mt-2">
+            <a href={signInUrl} className={cn("group inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-career-button)] border border-b-2 border-[#f59e0b] bg-gradient-to-r from-[#0a3a7a] via-[#104899] to-[#0a3a7a] px-6 text-sm font-black text-white shadow-md hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-lg sm:min-h-10 transition-all duration-200", focusRing)}>
+              <ShieldCheck size={17} className="text-amber-400" /> Sign in to access
+            </a>
+          </div>
+        ) : onRetry || backHref ? (
           <div className="flex flex-wrap justify-center gap-2">
             {onRetry ? <Button type="button" onClick={onRetry} loading={retrying}><RefreshCw size={16} /> Retry</Button> : null}
             {backHref ? <a href={backHref} className={cn("inline-flex min-h-12 items-center justify-center rounded-[var(--radius-career-button)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] px-4 text-sm font-semibold hover:border-[var(--cos-border-hover)] hover:bg-[var(--cos-surface-container-low)] sm:min-h-10", focusRing)}>{backLabel}</a> : null}

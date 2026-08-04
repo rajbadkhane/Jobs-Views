@@ -290,13 +290,24 @@ export function AdminPortal({ view }: { view: AdminView }) {
           cards={view === "dashboard" ? 8 : 5}
         />
       ) : failed ? (
-        <ErrorState
-          error={failed.error}
-          onRetry={() => queries.forEach((query) => void query.refetch())}
-          retrying={queries.some((query) => query.isFetching)}
-          backHref="/admin"
-          backLabel="Admin dashboard"
-        />
+        (() => {
+          const status = (failed.error as { response?: { status?: number } })?.response?.status;
+          const isUnauth = status === 401 || String(failed.error).includes("401") || String(failed.error).toLowerCase().includes("unauthorized");
+          if (isUnauth && typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+            setTimeout(() => { window.location.href = "/admin/login"; }, 1500);
+          }
+          return (
+            <ErrorState
+              error={failed.error}
+              title={isUnauth ? "Admin Authentication Required" : undefined}
+              description={isUnauth ? "You are not signed in on this device, or your session expired. Up to 5 concurrent devices allowed per account. Redirecting to admin login..." : undefined}
+              onRetry={isUnauth ? undefined : () => queries.forEach((query) => void query.refetch())}
+              retrying={queries.some((query) => query.isFetching)}
+              backHref={isUnauth ? "/admin/login" : "/admin"}
+              backLabel={isUnauth ? "Sign in to Admin Panel" : "Admin dashboard"}
+            />
+          );
+        })()
       ) : (
         <motion.div {...motionProps} className="grid gap-6">
           <AdminHeader view={view} />

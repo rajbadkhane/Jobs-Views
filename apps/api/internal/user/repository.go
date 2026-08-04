@@ -186,6 +186,6 @@ func (r *Repository) AddAudit(ctx context.Context, userID uuid.UUID, action, res
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO audit_events (user_id, action, resource_type, resource_id, metadata, ip_address, user_agent)
 		VALUES ($1, $2, $3, $4, $5, NULLIF($6, '')::inet, $7)
-	`, userID, action, resourceType, resourceID, bytes, ip, userAgent)
+	`, userID, action, resourceType, resourceID, string(bytes), ip, userAgent)
 	return err
 }

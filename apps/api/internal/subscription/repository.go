@@ -59,7 +59,7 @@ func (r *Repository) CreateOTPOrder(ctx context.Context, userID uuid.UUID, email
 		INSERT INTO candidate_subscription_orders
 		(user_id, plan_id, email, next_path, amount_paise, currency, duration_days, application_limit, entitlements, otp_hash, otp_expires_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id
-	`, userID, plan.ID, strings.ToLower(email), next, plan.PricePaise, plan.Currency, plan.DurationDays, plan.ApplicationLimit, entitlements, otpHash, expiresAt).Scan(&id)
+	`, userID, plan.ID, strings.ToLower(email), next, plan.PricePaise, plan.Currency, plan.DurationDays, plan.ApplicationLimit, string(entitlements), otpHash, expiresAt).Scan(&id)
 	if err != nil {
 		return CheckoutOrder{}, err
 	}
@@ -140,7 +140,7 @@ func (r *Repository) Activate(ctx context.Context, providerOrderID, providerPaym
 	err = tx.QueryRow(ctx, `
 		INSERT INTO candidate_subscriptions (user_id, plan_id, order_id, price_paise, currency, application_limit, entitlements, starts_at, ends_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()+make_interval(days => $8)) RETURNING id
-	`, order.UserID, order.Plan.ID, order.ID, order.AmountPaise, order.Currency, order.ApplicationLimit, entitlements, order.DurationDays).Scan(&subscriptionID)
+	`, order.UserID, order.Plan.ID, order.ID, order.AmountPaise, order.Currency, order.ApplicationLimit, string(entitlements), order.DurationDays).Scan(&subscriptionID)
 	if err != nil {
 		return ActiveSubscription{}, err
 	}
@@ -211,7 +211,7 @@ func (r *Repository) CreateSupportTicket(ctx context.Context, userID uuid.UUID, 
 	err := r.db.QueryRow(ctx, `
 		INSERT INTO support_tickets (requester_user_id,email,ticket_type,subject,message,status,priority,metadata)
 		VALUES ($1,$2,'ticket',$3,$4,'open',$5,$6) RETURNING id,status,priority
-	`, userID, email, subject, message, priority, metadata).Scan(&item.ID, &item.Status, &item.Priority)
+	`, userID, email, subject, message, priority, string(metadata)).Scan(&item.ID, &item.Status, &item.Priority)
 	return item, err
 }
 

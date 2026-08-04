@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: jobs-view-api
+    runtime: go
+    rootDir: apps/api
+    plan: free
+    autoDeploy: true
+    buildCommand: go build -o jobs-view-api ./cmd/api
+    startCommand: ./jobs-view-api
+    healthCheckPath: /ready
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SERVER_HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_ISSUER
+        value: jobs-view-api
+      - key: CORS_ALLOW_ORIGINS
+        sync: false
+      - key: MAIL_PROVIDER
+        value: resend
+      - key: MAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: RAZORPAY_API_BASE_URL
+        value: https://api.razorpay.com/v1
+      - key: STORAGE_PROVIDER
+        value: local
+      - key: STORAGE_BUCKET
+        value: jobs-view-assets
+      - key: STORAGE_BASE_URL
+        sync: false
+      - key: RESUME_BUILDER_TEST_EMAILS
+        value: ""

@@ -1,0 +1,58 @@
+# Cloudflare Zero-Trust Tunnel + Supabase DB Deployment Architecture
+# Designed for running the Go backend API behind Cloudflare Edge while frontends are hosted on Vercel & DB on Supabase.
+# Usage: docker compose -f docker-compose.cloudflare-supabase.yml up -d --build
+
+services:
+  # Optional lightweight Redis for JWT rate-limiting and session caching
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Standalone Go Backend API
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: apps/api/.env
+    environment:
+      # Supabase Connection: Use Supabase Session/Transaction Pooler Connection String (Port 6543 or 5432)
+      DATABASE_URL: ${SUPABASE_DATABASE_URL:?SUPABASE_DATABASE_URL is required (e.g. postgres://postgres.proj:pass@aws-0-us-east-1.pooler.supabase.com:6543/postgres)}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      APP_ENV: production
+      SERVER_HOST: 0.0.0.0
+      
+      # Cloudflare R2 Object Storage for Candidate Resumes & Employer Logos (Zero Egress Costs)
+      STORAGE_PROVIDER: r2
+      CLOUDFLARE_R2_BUCKET: ${CLOUDFLARE_R2_BUCKET:-jobs-view-assets}
+      CLOUDFLARE_R2_ACCOUNT_ID: ${CLOUDFLARE_R2_ACCOUNT_ID}
+      CLOUDFLARE_R2_ACCESS_KEY_ID: ${CLOUDFLARE_R2_ACCESS_KEY_ID}
+      CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${CLOUDFLARE_R2_SECRET_ACCESS_KEY}
+      STORAGE_BASE_URL: ${STORAGE_BASE_URL:-https://assets.jobsview.in}
+
+      # CORS allowlists for Vercel Frontends
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-https://jobsview.in,https://www.jobsview.in,https://admin.jobsview.in,https://employer.jobsview.in}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Cloudflare Zero-Trust Edge Tunnel (No exposed firewall ports required!)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required from Cloudflare Zero Trust Dashboard}
+    depends_on:
+      - api
+
+volumes:
+  redisdata:

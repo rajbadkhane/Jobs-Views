@@ -1,0 +1,104 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-careeros}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: apps/api/.env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-careeros}?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      APP_ENV: production
+      STORAGE_PROVIDER: r2
+      CLOUDFLARE_R2_BUCKET: ${CLOUDFLARE_R2_BUCKET:-jobs-view-assets}
+      STORAGE_BASE_URL: ${STORAGE_BASE_URL:-https://assets.jobsview.in}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required}
+    depends_on:
+      - api
+      - web
+      - admin
+      - employer
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        APP_WORKSPACE: "@career-os/web"
+        APP_DIR: "apps/web"
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      NEXT_PUBLIC_RELEASE: ${NEXT_PUBLIC_RELEASE:-production}
+      NEXT_PUBLIC_APP_ENV: production
+    depends_on:
+      - api
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_ADMIN_SITE_URL:-https://admin.jobsview.in}
+      NEXT_PUBLIC_RELEASE: ${NEXT_PUBLIC_RELEASE:-production}
+      NEXT_PUBLIC_APP_ENV: production
+    depends_on:
+      - api
+
+  employer:
+    build:
+      context: .
+      dockerfile: apps/employer/Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_EMPLOYER_SITE_URL:-https://employer.jobsview.in}
+      NEXT_PUBLIC_RELEASE: ${NEXT_PUBLIC_RELEASE:-production}
+      NEXT_PUBLIC_APP_ENV: production
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  redisdata:

@@ -1,0 +1,7 @@
+DROP TRIGGER IF EXISTS trg_candidate_subscriptions_updated_at ON candidate_subscriptions;
+DROP TRIGGER IF EXISTS trg_candidate_subscription_orders_updated_at ON candidate_subscription_orders;
+DROP TRIGGER IF EXISTS trg_candidate_subscription_plans_updated_at ON candidate_subscription_plans;
+DROP TABLE IF EXISTS candidate_payment_events;
+DROP TABLE IF EXISTS candidate_subscriptions;
+DROP TABLE IF EXISTS candidate_subscription_orders;
+DROP TABLE IF EXISTS candidate_subscription_plans;

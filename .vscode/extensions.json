@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "golang.go",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "yoavbls.coi-serviceworker",
+    "mutianux.go-orbit",
+    "ms-azuretools.vscode-docker"
+  ]
+}

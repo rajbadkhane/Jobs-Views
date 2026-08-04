@@ -1,0 +1,60 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+web_folders/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+bin/
+
+# IDEs and Editors
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Temp/Cache
+.turbo/
+.eslintcache
+.parcel-cache
+apps/api/uploads/
+
+# Database/Docker volumes data (if mounted locally)
+pgdata/
+redisdata/
+
+# Local workspace temp & server logs
+.artifacts/
+.logs/
+.server-logs/
+.run/
+.tmp/
+*.err.log
+*.out.log
+

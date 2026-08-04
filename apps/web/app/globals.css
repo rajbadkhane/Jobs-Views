@@ -1,0 +1,271 @@
+@import "tailwindcss";
+@source "../../../packages/ui/src";
+
+@theme {
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --color-career-surface: var(--cos-surface);
+  --color-career-surface-dim: var(--cos-surface-dim);
+  --color-career-surface-bright: var(--cos-surface-bright);
+  --color-career-container-lowest: var(--cos-surface-container-lowest);
+  --color-career-container-low: var(--cos-surface-container-low);
+  --color-career-container: var(--cos-surface-container);
+  --color-career-container-high: var(--cos-surface-container-high);
+  --color-career-container-highest: var(--cos-surface-container-highest);
+  --color-career-on-surface: var(--cos-on-surface);
+  --color-career-on-surface-variant: var(--cos-on-surface-variant);
+  --color-career-outline: var(--cos-outline);
+  --color-career-outline-variant: var(--cos-outline-variant);
+  --color-career-primary: var(--cos-primary);
+  --color-career-primary-container: var(--cos-primary-container);
+  --color-career-secondary: var(--cos-secondary);
+  --color-career-secondary-container: var(--cos-secondary-container);
+  --color-career-tertiary: var(--cos-tertiary);
+  --color-career-error: var(--cos-error);
+  --color-career-teal-50: #F0FDFA;
+  --color-career-teal-100: #CCFBF1;
+  --color-career-teal-200: #99F6E4;
+  --color-career-teal-300: #5EEAD4;
+  --color-career-teal-400: #2DD4BF;
+  --color-career-teal-500: #14B8A6;
+  --color-career-teal-600: #0D9488;
+  --color-career-teal-700: #0F766E;
+  --color-career-teal-800: #115E59;
+  --color-career-teal-900: #134E4A;
+  --color-career-blue-50: #EFF6FF;
+  --color-career-blue-100: #DBEAFE;
+  --color-career-blue-200: #BFDBFE;
+  --color-career-blue-300: #93C5FD;
+  --color-career-blue-400: #60A5FA;
+  --color-career-blue-500: #3B82F6;
+  --color-career-blue-600: #2563EB;
+  --color-career-blue-700: #1D4ED8;
+  --color-career-blue-800: #1E40AF;
+  --color-career-blue-900: #1E3A8A;
+  --shadow-career-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-career-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-career-lg: 0 18px 50px rgba(15, 23, 42, 0.12);
+  --shadow-career-xs: 0 1px 1px rgba(15, 23, 42, 0.05);
+  --shadow-career-xl: 0 24px 70px rgba(15, 23, 42, 0.16);
+  --shadow-career-hover: 0 14px 36px rgba(15, 23, 42, 0.12);
+  --shadow-career-floating: 0 18px 54px rgba(15, 23, 42, 0.14);
+  --shadow-career-modal: 0 28px 80px rgba(15, 23, 42, 0.2);
+  --shadow-career-drawer: 0 22px 70px rgba(15, 23, 42, 0.18);
+  --radius-career-sm: 0.25rem;
+  --radius-career: 0.875rem;
+  --radius-career-md: 0.75rem;
+  --radius-career-lg: 1rem;
+  --radius-career-xl: 1.5rem;
+  --radius-career-input: 0.75rem;
+  --radius-career-card: 1.25rem;
+  --radius-career-button: 0.875rem;
+  --radius-career-dialog: 1.5rem;
+  --radius-career-sheet: 2rem;
+  --spacing-career-0-5: 0.125rem;
+  --spacing-career-1: 0.25rem;
+  --spacing-career-2: 0.5rem;
+  --spacing-career-3: 0.75rem;
+  --spacing-career-4: 1rem;
+  --spacing-career-5: 1.25rem;
+  --spacing-career-6: 1.5rem;
+  --spacing-career-8: 2rem;
+  --spacing-career-10: 2.5rem;
+  --spacing-career-12: 3rem;
+  --spacing-career-14: 3.5rem;
+  --spacing-career-16: 4rem;
+  --spacing-career-20: 5rem;
+  --spacing-career-24: 6rem;
+  --spacing-career-32: 8rem;
+}
+
+:root {
+  color-scheme: light;
+  --cos-surface: #f8fafc;
+  --cos-surface-dim: #f1f5f9;
+  --cos-surface-bright: #ffffff;
+  --cos-surface-container-lowest: #ffffff;
+  --cos-surface-container-low: #ffffff;
+  --cos-surface-container: #f8fafc;
+  --cos-surface-container-high: #f1f5f9;
+  --cos-surface-container-highest: #e2e8f0;
+  --cos-on-surface: #0f172a;
+  --cos-on-surface-variant: #475569;
+  --cos-inverse-surface: #0f172a;
+  --cos-inverse-on-surface: #f8fafc;
+  --cos-outline: #94a3b8;
+  --cos-outline-variant: #e2e8f0;
+  --cos-primary: #0a3a7a;
+  --cos-on-primary: #ffffff;
+  --cos-primary-container: #0a3a7a;
+  --cos-on-primary-container: #ffffff;
+  --cos-secondary: #f59e0b;
+  --cos-on-secondary: #ffffff;
+  --cos-secondary-container: #f59e0b;
+  --cos-on-secondary-container: #ffffff;
+  --cos-tertiary: #2563eb;
+  --cos-error: #dc2626;
+  --cos-focus-ring: #f59e0b;
+  --cos-border-hover: #64748b;
+  --cos-border-focus: #f59e0b;
+  --cos-border-active: #0a3a7a;
+  --cos-border-selected: #0a3a7a;
+  --cos-border-error: #dc2626;
+  --cos-border-success: #16a34a;
+  --cos-border-warning: #f59e0b;
+  --brand-gradient: linear-gradient(135deg, #0a3a7a 0%, #f59e0b 100%);
+}
+
+.dark {
+  color-scheme: dark;
+  --cos-surface: #020617;
+  --cos-surface-dim: #020617;
+  --cos-surface-bright: #0f172a;
+  --cos-surface-container-lowest: #020617;
+  --cos-surface-container-low: #0f172a;
+  --cos-surface-container: #111827;
+  --cos-surface-container-high: #1e293b;
+  --cos-surface-container-highest: #334155;
+  --cos-on-surface: #f8fafc;
+  --cos-on-surface-variant: #cbd5e1;
+  --cos-inverse-surface: #ecf2ef;
+  --cos-inverse-on-surface: #161d1b;
+  --cos-outline: #64748b;
+  --cos-outline-variant: #1e293b;
+  --cos-primary: #60a5fa;
+  --cos-on-primary: #082e61;
+  --cos-primary-container: #0a3a7a;
+  --cos-on-primary-container: #ffffff;
+  --cos-secondary: #f59e0b;
+  --cos-on-secondary: #451a03;
+  --cos-secondary-container: #92400e;
+  --cos-tertiary: #93c5fd;
+  --cos-error: #fca5a5;
+  --cos-border-hover: #64748b;
+  --cos-border-focus: #f59e0b;
+  --cos-border-active: #60a5fa;
+  --cos-border-selected: #60a5fa;
+  --cos-border-error: #f87171;
+  --cos-border-success: #34d399;
+  --cos-border-warning: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--cos-surface);
+  color: var(--cos-on-surface);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select,
+summary {
+  touch-action: manipulation;
+}
+
+@media (max-width: 640px) {
+  html {
+    scroll-padding-top: calc(4.5rem + env(safe-area-inset-top));
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+::selection {
+  background: color-mix(in srgb, var(--cos-primary-container) 30%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cos-focus-ring);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-color: var(--cos-primary-container) transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--cos-primary-container) 70%, transparent);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cos-primary-container);
+}
+
+.jobsview-partner-track {
+  animation: jobsview-partners-scroll 34s linear infinite;
+}
+
+.jobsview-partner-track:hover,
+.jobsview-partner-track:focus-within {
+  animation-play-state: paused;
+}
+
+@keyframes jobsview-partners-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  * {
+    scrollbar-width: none;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jobsview-partner-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

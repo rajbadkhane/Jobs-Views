@@ -1,0 +1,21 @@
+DROP TRIGGER IF EXISTS trg_seo_templates_updated_at ON seo_templates;
+DROP TRIGGER IF EXISTS trg_seo_redirects_updated_at ON seo_redirects;
+DROP TRIGGER IF EXISTS trg_support_tickets_updated_at ON support_tickets;
+DROP TRIGGER IF EXISTS trg_admin_reports_updated_at ON admin_reports;
+DROP TRIGGER IF EXISTS trg_platform_settings_updated_at ON platform_settings;
+DROP TRIGGER IF EXISTS trg_cms_entries_updated_at ON cms_entries;
+DROP TRIGGER IF EXISTS trg_billing_invoices_updated_at ON billing_invoices;
+DROP TRIGGER IF EXISTS trg_company_subscriptions_updated_at ON company_subscriptions;
+DROP TRIGGER IF EXISTS trg_subscription_plans_updated_at ON subscription_plans;
+
+DROP TABLE IF EXISTS seo_templates;
+DROP TABLE IF EXISTS seo_redirects;
+DROP TABLE IF EXISTS support_tickets;
+DROP TABLE IF EXISTS admin_reports;
+DROP TABLE IF EXISTS admin_audit_logs;
+DROP TABLE IF EXISTS platform_settings;
+DROP TABLE IF EXISTS cms_entries;
+DROP TABLE IF EXISTS billing_payments;
+DROP TABLE IF EXISTS billing_invoices;
+DROP TABLE IF EXISTS company_subscriptions;
+DROP TABLE IF EXISTS subscription_plans;

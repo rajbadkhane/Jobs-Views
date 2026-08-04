@@ -133,13 +133,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   tokens: null,
   hydrated: false,
   setSession: (user, tokens = null) => {
+    let activeTokens = tokens;
     if (typeof window !== "undefined") {
       if (tokens) {
         localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
         if (tokens.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+      } else if (localStorage.getItem(ACCESS_TOKEN_KEY)) {
+        activeTokens = {
+          accessToken: localStorage.getItem(ACCESS_TOKEN_KEY)!,
+          refreshToken: localStorage.getItem(REFRESH_TOKEN_KEY) ?? undefined
+        };
       }
     }
-    set({ user, tokens });
+    set({ user, tokens: activeTokens });
   },
   clearSession: () => {
     if (typeof window !== "undefined") {
@@ -228,32 +234,35 @@ export function createApiClient(baseURL = appConfig.apiBaseUrl): AxiosInstance {
         return client(original);
         }
         const isAuthEndpoint = typeof original?.url === "string" && original.url.startsWith("/auth/");
-        if (error.response?.status === 401 && original && !original._retry && !isAuthEndpoint) {
-        original._retry = true;
-        try {
-          const refreshToken = typeof window !== "undefined" ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
-          const refresh = await axios.post(
-            `${baseURL}/auth/refresh`,
-            refreshToken ? { refresh_token: refreshToken } : undefined,
-            {
-              withCredentials: true,
-              timeout: 10_000,
-              headers: refreshToken ? { "X-Refresh-Token": refreshToken } : {}
+        const refreshToken = typeof window !== "undefined" ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
+        if (error.response?.status === 401 && original && !original._retry && !isAuthEndpoint && refreshToken) {
+          original._retry = true;
+          try {
+            const refresh = await axios.post(
+              `${baseURL}/auth/refresh`,
+              { refresh_token: refreshToken },
+              {
+                withCredentials: true,
+                timeout: 10_000,
+                headers: { "X-Refresh-Token": refreshToken }
+              }
+            );
+            const data = refresh.data?.data;
+            if (typeof window !== "undefined" && data?.access_token) localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
+            if (typeof window !== "undefined" && data?.refresh_token) localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
+            return client(original);
+          } catch (refreshError) {
+            if (typeof window !== "undefined") {
+              localStorage.removeItem(ACCESS_TOKEN_KEY);
+              localStorage.removeItem(REFRESH_TOKEN_KEY);
+              window.dispatchEvent(new CustomEvent("jobsview:session-expired"));
             }
-          );
-          const data = refresh.data?.data;
-          if (typeof window !== "undefined" && data?.access_token) localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
-          if (typeof window !== "undefined" && data?.refresh_token) localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
-          return client(original);
-        } catch (refreshError) {
-          if (typeof window !== "undefined") {
-            localStorage.removeItem(ACCESS_TOKEN_KEY);
-            localStorage.removeItem(REFRESH_TOKEN_KEY);
-            window.dispatchEvent(new CustomEvent("jobsview:session-expired"));
+            logger.warn("Session refresh failed", { message: apiErrorMessage(refreshError) });
           }
-          logger.warn("Session refresh failed", { message: apiErrorMessage(refreshError) });
+        } else if (error.response?.status === 401 && !refreshToken && typeof window !== "undefined") {
+          localStorage.removeItem(ACCESS_TOKEN_KEY);
+          localStorage.removeItem(REFRESH_TOKEN_KEY);
         }
-      }
       logger.warn("API request failed", { status, url: original?.url, method, message: apiErrorMessage(error) });
       return Promise.reject(error);
     }

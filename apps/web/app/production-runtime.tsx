@@ -23,8 +23,13 @@ export function ProductionRuntime() {
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
     const onSessionExpired = () => {
-      window.location.href = "/session-expired";
+      const privateRoutes = ["/dashboard", "/profile", "/applications", "/saved", "/settings", "/messages"];
+      const current = window.location.pathname;
+      if (privateRoutes.some((route) => current.startsWith(route))) {
+        window.location.href = "/session-expired";
+      }
     };
+
     trackEvent("page.view", { path: window.location.pathname });
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);

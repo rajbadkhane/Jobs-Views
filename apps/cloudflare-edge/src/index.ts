@@ -29,8 +29,9 @@ export interface Env {
  * - Fully synchronized with Render production environment variables
  */
 
-const ALLOWED_HEADERS = "Content-Type, Authorization, X-Requested-With, X-Release-Candidate, Accept";
-const EXPOSED_HEADERS = "X-Cloudflare-Edge-Cache, X-Response-Time, Content-Length";
+const ALLOWED_HEADERS = "Origin, Content-Type, Accept, Authorization, X-Request-ID, X-Refresh-Token, X-Requested-With, X-Release-Candidate, CF-Connecting-IP, X-Forwarded-For";
+const EXPOSED_HEADERS = "X-Cloudflare-Edge-Cache, X-Response-Time, Content-Length, X-Request-ID";
+
 
 function resolveAllowedOrigin(request: Request, env: Env): string {
   const reqOrigin = request.headers.get("Origin");

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Bookmark,
@@ -23,8 +23,8 @@ import {
   Zap
 } from "lucide-react";
 
-import { useCandidateActions, useCandidateSubscription, useJobBySlug, useSession } from "@career-os/hooks";
-import { apiErrorMessage, type PublicJob } from "@career-os/shared";
+import { useCandidateActions, useCandidateData, useCandidateSubscription, useJobBySlug, useSession } from "@career-os/hooks";
+import { apiErrorMessage, useNotificationStore, type PublicJob } from "@career-os/shared";
 import {
   Avatar,
   Badge,
@@ -63,9 +63,20 @@ function openLoginForPlans(slug: string) {
 export function JobDetailExperience({ slug, initialJob }: { slug: string; initialJob?: PublicJob }) {
   const query = useJobBySlug(slug, initialJob);
   const session = useSession();
-  const subscription = useCandidateSubscription(session.data?.role === "JOB_SEEKER");
+  const isCandidate = session.data?.role === "JOB_SEEKER";
+  const subscription = useCandidateSubscription(isCandidate);
   const actions = useCandidateActions();
-  const [saved, setSaved] = useState(false);
+  const savedJobsQuery = useCandidateData({
+    savedJobs: true,
+    profile: false,
+    completion: false,
+    skills: false,
+    education: false,
+    experience: false,
+    applications: false,
+    notifications: false,
+    notificationSummary: false
+  }).savedJobs;
   useEffect(() => {
     if (query.data) rememberRecentJob(query.data);
   }, [query.data]);
@@ -78,6 +89,9 @@ export function JobDetailExperience({ slug, initialJob }: { slug: string; initia
 
   const job = query.data;
   const subscribed = subscription.data?.active === true;
+  const saved = isCandidate ? savedJobIds(savedJobsQuery.data).includes(job.id) : false;
+  const savingJob = actions.saveJob.isPending || actions.removeSavedJob.isPending;
+
   function apply() {
     if (!session.data) {
       openLoginForPlans(job.slug);
@@ -90,9 +104,32 @@ export function JobDetailExperience({ slug, initialJob }: { slug: string; initia
     actions.apply.mutate({ job_id: job.id, source: "job_detail" });
   }
 
+  function toggleSave() {
+    if (!session.data) {
+      window.location.href = `/login?next=${encodeURIComponent(`/jobs/${job.slug}`)}`;
+      return;
+    }
+    if (savingJob) return;
+    if (saved) {
+      actions.removeSavedJob.mutate(job.id);
+    } else {
+      actions.saveJob.mutate({ job_id: job.id });
+    }
+  }
+
+  async function share() {
+    const ok = await shareJob(job);
+    const notify = useNotificationStore.getState().notify;
+    if (ok === "shared" || ok === "copied") {
+      notify({ title: ok === "copied" ? "Link copied" : "Shared", description: ok === "copied" ? "The job link was copied to your clipboard." : "Thanks for sharing this role.", intent: "success" });
+    } else if (ok === "failed") {
+      notify({ title: "Couldn't share this job", description: "Please copy the page link from your browser's address bar instead.", intent: "error" });
+    }
+  }
+
   return (
     <main id="main-content" tabIndex={-1} data-job-slug={job.slug} className="min-h-screen bg-[var(--cos-surface)] pb-32 text-[var(--cos-on-surface)] lg:pb-0">
-      <Hero job={job} saved={saved} setSaved={setSaved} subscribed={subscribed} applying={actions.apply.isPending} onApply={apply} />
+      <Hero job={job} saved={saved} savingJob={savingJob} onToggleSave={toggleSave} onShare={share} subscribed={subscribed} applying={actions.apply.isPending} onApply={apply} />
       <section className={cn(containerClass, "grid gap-6 py-6 lg:grid-cols-[minmax(0,1fr)_360px]") }>
         <div className="grid min-w-0 gap-6">
           <JobOverview job={job} />
@@ -102,14 +139,19 @@ export function JobDetailExperience({ slug, initialJob }: { slug: string; initia
           <SubscriberDetails job={job} />
           {!subscribed ? <SubscribeGate slug={job.slug} /> : null}
         </div>
-        <StickyActionCard job={job} saved={saved} setSaved={setSaved} subscribed={subscribed} applying={actions.apply.isPending} onApply={apply} />
+        <StickyActionCard job={job} saved={saved} savingJob={savingJob} onToggleSave={toggleSave} onShare={share} subscribed={subscribed} applying={actions.apply.isPending} onApply={apply} />
       </section>
-      <MobileApplyBar job={job} saved={saved} setSaved={setSaved} subscribed={subscribed} applying={actions.apply.isPending} onApply={apply} />
+      <MobileApplyBar job={job} saved={saved} savingJob={savingJob} onToggleSave={toggleSave} onShare={share} subscribed={subscribed} applying={actions.apply.isPending} onApply={apply} />
     </main>
   );
 }
 
-function Hero({ job, saved, setSaved, subscribed, applying, onApply }: { job: PublicJob; saved: boolean; setSaved: (value: boolean) => void; subscribed: boolean; applying: boolean; onApply: () => void }) {
+function savedJobIds(data: unknown): string[] {
+  const list = Array.isArray(data) ? data : data && typeof data === "object" && Array.isArray((data as { items?: unknown }).items) ? (data as { items: unknown[] }).items : [];
+  return list.map((item) => (item as { job_id?: string })?.job_id).filter((id): id is string => Boolean(id));
+}
+
+function Hero({ job, saved, savingJob, onToggleSave, onShare, subscribed, applying, onApply }: { job: PublicJob; saved: boolean; savingJob: boolean; onToggleSave: () => void; onShare: () => void; subscribed: boolean; applying: boolean; onApply: () => void }) {
   const description = job.short_description?.trim() || job.full_description?.trim();
   const badges = [
     job.status ? titleCase(job.status) : "",
@@ -146,12 +188,12 @@ function Hero({ job, saved, setSaved, subscribed, applying, onApply }: { job: Pu
           <div className="mt-6 flex flex-wrap gap-3">
             <Button size="lg" onClick={onApply} loading={applying} disabled={applying}><Zap size={17} /> {subscribed ? "Apply now" : "Unlock application"}</Button>
             <a href="#job-details"><Button variant="secondary" size="lg">See full details</Button></a>
-            <Button variant="outline" size="lg" onClick={() => setSaved(!saved)}><Bookmark size={17} className={saved ? "fill-amber-400 text-amber-400" : undefined} /> Save</Button>
-            <Button variant="outline" size="lg" onClick={() => shareJob(job)}><Share2 size={17} /> Share</Button>
+            <Button variant="outline" size="lg" onClick={onToggleSave} disabled={savingJob} aria-pressed={saved}><Bookmark size={17} className={saved ? "fill-amber-400 text-amber-400" : undefined} /> {saved ? "Saved" : "Save"}</Button>
+            <Button variant="outline" size="lg" onClick={onShare}><Share2 size={17} /> Share</Button>
             <Button variant="ghost" size="lg" onClick={() => { window.location.href = `/report-issue?job=${encodeURIComponent(job.slug)}`; }}><Flag size={17} /> Report</Button>
           </div>
         </motion.div>
-        <motion.div {...sectionMotion(0.04)} className="hidden lg:block">
+        <motion.div {...sectionMotion(0.04)} className="mt-6 lg:mt-0">
           <EnterpriseCard title="Above the fold snapshot" description="Key facts supplied with this listing." icon={<Sparkles size={18} />}>
             <div className="grid gap-3">
               {snapshot(job).map((item) => (
@@ -165,7 +207,7 @@ function Hero({ job, saved, setSaved, subscribed, applying, onApply }: { job: Pu
   );
 }
 
-function StickyActionCard({ job, saved, setSaved, subscribed, applying, onApply }: { job: PublicJob; saved: boolean; setSaved: (value: boolean) => void; subscribed: boolean; applying: boolean; onApply: () => void }) {
+function StickyActionCard({ job, saved, savingJob, onToggleSave, onShare, subscribed, applying, onApply }: { job: PublicJob; saved: boolean; savingJob: boolean; onToggleSave: () => void; onShare: () => void; subscribed: boolean; applying: boolean; onApply: () => void }) {
   return (
     <aside className="hidden lg:block">
       <Card className="sticky top-20 grid gap-4">
@@ -177,8 +219,8 @@ function StickyActionCard({ job, saved, setSaved, subscribed, applying, onApply 
         <Button size="lg" fullWidth onClick={onApply} loading={applying} disabled={applying}><Zap size={17} /> {subscribed ? "Apply now" : "Unlock application"}</Button>
         {!subscribed ? <Button variant="secondary" fullWidth onClick={() => openPlans(job.slug)}>View plans</Button> : null}
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" onClick={() => setSaved(!saved)}><Bookmark size={16} /> Save</Button>
-          <Button variant="outline" onClick={() => shareJob(job)}><Share2 size={16} /> Share</Button>
+          <Button variant="outline" onClick={onToggleSave} disabled={savingJob} aria-pressed={saved}><Bookmark size={16} className={saved ? "fill-amber-400 text-amber-400" : undefined} /> {saved ? "Saved" : "Save"}</Button>
+          <Button variant="outline" onClick={onShare}><Share2 size={16} /> Share</Button>
         </div>
         <div className="rounded-[var(--radius-career-button)] border border-dashed border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-low)] p-3 text-sm">
           <div className="font-semibold">{subscribed ? "Subscription active" : "Candidate subscription"}</div>
@@ -264,7 +306,7 @@ function CompanyPreview({ job }: { job: PublicJob }) {
         name={job.company_name}
         location={[job.city, job.state, job.country].filter(Boolean).join(", ") || undefined}
         logo={job.company_logo_url}
-        href={`/companies/${job.company_slug || job.company_id}`}
+        href={job.company_slug ? `/companies/${job.company_slug}` : undefined}
       />
     </SectionCard>
   );
@@ -311,7 +353,7 @@ function SubscriberDetails({ job }: { job: PublicJob }) {
   );
 }
 
-function MobileApplyBar({ job, saved, setSaved, subscribed, applying, onApply }: { job: PublicJob; saved: boolean; setSaved: (value: boolean) => void; subscribed: boolean; applying: boolean; onApply: () => void }) {
+function MobileApplyBar({ job, saved, savingJob, onToggleSave, onShare, subscribed, applying, onApply }: { job: PublicJob; saved: boolean; savingJob: boolean; onToggleSave: () => void; onShare: () => void; subscribed: boolean; applying: boolean; onApply: () => void }) {
   return (
     <div className="fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 grid grid-cols-[1fr_auto_auto] gap-2 rounded-[var(--radius-career-card)] border border-[var(--cos-outline-variant)] bg-[color-mix(in_srgb,var(--cos-surface-container-lowest)_94%,transparent)] p-2 shadow-career-floating backdrop-blur-xl sm:inset-x-3 lg:hidden">
       <div className="col-span-3 grid grid-cols-[auto_1fr] items-center gap-2 rounded-[var(--radius-career-button)] bg-[var(--cos-surface-container-low)] px-3 py-2">
@@ -319,8 +361,8 @@ function MobileApplyBar({ job, saved, setSaved, subscribed, applying, onApply }:
         <span className="truncate text-right text-sm font-bold text-[var(--cos-on-surface)]">{salary(job)}</span>
       </div>
       <Button onClick={onApply} loading={applying} disabled={applying}>{subscribed ? "Apply" : "Unlock"}</Button>
-      <Button variant="outline" size="icon" aria-label="Save job" onClick={() => setSaved(!saved)}><Bookmark size={16} className={saved ? "fill-amber-400 text-amber-400" : undefined} /></Button>
-      <Button variant="outline" size="icon" aria-label="Share job" onClick={() => shareJob(job)}><Share2 size={16} /></Button>
+      <Button variant="outline" size="icon" aria-label={saved ? "Remove from saved jobs" : "Save job"} aria-pressed={saved} disabled={savingJob} onClick={onToggleSave}><Bookmark size={16} className={saved ? "fill-amber-400 text-amber-400" : undefined} /></Button>
+      <Button variant="outline" size="icon" aria-label="Share job" onClick={onShare}><Share2 size={16} /></Button>
     </div>
   );
 }
@@ -428,11 +470,21 @@ function errorStatus(error: unknown) {
   return (error as { response?: { status?: number } }).response?.status;
 }
 
-async function shareJob(job: PublicJob) {
+async function shareJob(job: PublicJob): Promise<"shared" | "copied" | "failed" | "cancelled"> {
   const url = window.location.href;
   if (navigator.share) {
-    await navigator.share({ title: `${job.title} at ${job.company_name}`, url }).catch(() => undefined);
-    return;
+    try {
+      await navigator.share({ title: `${job.title} at ${job.company_name}`, url });
+      return "shared";
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return "cancelled";
+      // Fall through to clipboard if the native share sheet itself failed to open.
+    }
   }
-  await navigator.clipboard?.writeText(url).catch(() => undefined);
+  try {
+    await navigator.clipboard?.writeText(url);
+    return "copied";
+  } catch {
+    return "failed";
+  }
 }

@@ -8,8 +8,9 @@ const useJobBySlug = vi.hoisted(() => vi.fn());
 const useSession = vi.hoisted(() => vi.fn());
 const useCandidateSubscription = vi.hoisted(() => vi.fn());
 const useCandidateActions = vi.hoisted(() => vi.fn());
+const useCandidateData = vi.hoisted(() => vi.fn());
 
-vi.mock("@career-os/hooks", () => ({ useJobBySlug, useSession, useCandidateSubscription, useCandidateActions }));
+vi.mock("@career-os/hooks", () => ({ useJobBySlug, useSession, useCandidateSubscription, useCandidateActions, useCandidateData }));
 
 import { JobDetailExperience } from "./job-detail-experience";
 
@@ -47,7 +48,8 @@ describe("job detail experience", () => {
     useJobBySlug.mockReset();
     useSession.mockReturnValue({ data: undefined, isPending: false });
     useCandidateSubscription.mockReturnValue({ data: undefined, isPending: false });
-    useCandidateActions.mockReturnValue({ apply: { mutate: vi.fn(), isPending: false } });
+    useCandidateActions.mockReturnValue({ apply: { mutate: vi.fn(), isPending: false }, saveJob: { mutate: vi.fn(), isPending: false }, removeSavedJob: { mutate: vi.fn(), isPending: false } });
+    useCandidateData.mockReturnValue({ savedJobs: { data: { items: [] }, isPending: false } });
   });
 
   it("renders the job returned by the slug query", () => {
@@ -82,7 +84,7 @@ describe("job detail experience", () => {
     useJobBySlug.mockReturnValue({ data: job, isPending: false, isError: false, isFetching: false, refetch: vi.fn() });
     useSession.mockReturnValue({ data: { id: "candidate", role: "JOB_SEEKER" }, isPending: false });
     useCandidateSubscription.mockReturnValue({ data: { active: true, plan: { slug: "basic" } }, isPending: false });
-    useCandidateActions.mockReturnValue({ apply: { mutate, isPending: false } });
+    useCandidateActions.mockReturnValue({ apply: { mutate, isPending: false }, saveJob: { mutate: vi.fn(), isPending: false }, removeSavedJob: { mutate: vi.fn(), isPending: false } });
     render(<JobDetailExperience slug={job.slug} initialJob={job} />);
 
     fireEvent.click(screen.getAllByRole("button", { name: /apply now/i })[0]);

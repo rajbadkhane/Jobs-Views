@@ -8,8 +8,17 @@ const navigation = vi.hoisted(() => ({
   push: vi.fn(),
   replace: vi.fn()
 }));
+const noopMutation = vi.hoisted(() => () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }));
 
-vi.mock("@career-os/hooks", () => ({ useJobsSearch }));
+vi.mock("@career-os/hooks", () => ({
+  useJobsSearch,
+  useSession: () => ({ data: undefined, isPending: false }),
+  useCandidateData: () => ({ savedJobs: { data: { items: [] }, isPending: false } }),
+  useCandidateActions: () => ({
+    saveJob: noopMutation(),
+    removeSavedJob: noopMutation()
+  })
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/jobs",
   useRouter: () => ({ push: navigation.push, replace: navigation.replace }),

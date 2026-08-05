@@ -33,30 +33,71 @@ jobsRouter.get("/", async (c) => {
     const search = c.req.query("search") || c.req.query("q") || "";
     const jobType = c.req.query("job_type") || c.req.query("type") || "";
     const state = c.req.query("state") || "";
+    const city = c.req.query("city") || "";
+    const company = c.req.query("company") || "";
+    const industry = c.req.query("industry") || "";
+    const education = c.req.query("education") || "";
     const workMode = c.req.query("work_mode") || "";
-    const limit = Number(c.req.query("limit")) || 50;
+    const salaryMin = Number(c.req.query("salary_min")) || 0;
+    const experience = c.req.query("experience");
+    const postedDays = Number(c.req.query("posted_days")) || 0;
+    const sortParam = c.req.query("sort") || "relevance";
+    const limit = Math.min(50, Number(c.req.query("limit")) || 50);
+    const page = Math.max(1, Number(c.req.query("page")) || 1);
+    const offset = (page - 1) * limit;
 
     const sql = getDb(c.env);
-    const jobs = await sql`
-      SELECT 
-        j.id, j.title, j.slug, j.short_description, j.full_description,
-        j.salary_min, j.salary_max, j.currency, j.salary_period, j.salary_basis,
-        j.experience_min, j.experience_max, j.education, j.openings,
-        j.work_mode, j.country, j.state, j.city, j.status, j.visibility,
-        j.job_types_list, jt.name as job_type,
-        c.id as company_id, c.name as company_name, c.slug as company_slug, c.logo_url as company_logo_url
-      FROM jobs j
-      JOIN companies c ON c.id = j.company_id
-      LEFT JOIN job_types jt ON jt.id = j.job_type_id
+
+    const filters = sql`
       WHERE j.status = 'published' AND j.visibility = 'public' AND j.deleted_at IS NULL
       ${search ? sql`AND (j.title ILIKE ${'%' + search + '%'} OR j.full_description ILIKE ${'%' + search + '%'} OR c.name ILIKE ${'%' + search + '%'})` : sql``}
       ${state ? sql`AND j.state ILIKE ${'%' + state + '%'}` : sql``}
+      ${city ? sql`AND (j.city ILIKE ${'%' + city + '%'} OR j.state ILIKE ${'%' + city + '%'})` : sql``}
+      ${company ? sql`AND (c.slug = ${company} OR c.name ILIKE ${'%' + company + '%'})` : sql``}
+      ${industry ? sql`AND c.industry ILIKE ${'%' + industry + '%'}` : sql``}
+      ${education ? sql`AND j.education ILIKE ${'%' + education + '%'}` : sql``}
       ${workMode ? sql`AND j.work_mode ILIKE ${'%' + workMode + '%'}` : sql``}
-      ORDER BY j.published_at DESC NULLS LAST, j.created_at DESC
-      LIMIT ${limit}
+      ${jobType ? sql`AND jt.slug = ${jobType}` : sql``}
+      ${salaryMin > 0 ? sql`AND (j.salary_max >= ${salaryMin} OR j.salary_min >= ${salaryMin})` : sql``}
+      ${experience !== undefined && experience !== "" ? sql`AND (j.experience_min IS NULL OR j.experience_min <= ${Number(experience)})` : sql``}
+      ${postedDays > 0 ? sql`AND (j.published_at >= NOW() - make_interval(days => ${postedDays}) OR (j.published_at IS NULL AND j.created_at >= NOW() - make_interval(days => ${postedDays})))` : sql``}
     `;
 
+    const orderBy =
+      sortParam === "salary_desc" || sortParam === "salary" ? sql`ORDER BY j.salary_max DESC NULLS LAST, j.published_at DESC NULLS LAST`
+      : sortParam === "salary_asc" ? sql`ORDER BY j.salary_min ASC NULLS LAST, j.published_at DESC NULLS LAST`
+      : sortParam === "company" ? sql`ORDER BY c.name ASC`
+      : sortParam === "latest" || sortParam === "newest" ? sql`ORDER BY j.published_at DESC NULLS LAST, j.created_at DESC`
+      : sql`ORDER BY j.published_at DESC NULLS LAST, j.created_at DESC`;
+
+    const [jobs, countRows] = await Promise.all([
+      sql`
+        SELECT
+          j.id, j.title, j.slug, j.short_description, j.full_description,
+          j.salary_min, j.salary_max, j.currency, j.salary_period, j.salary_basis,
+          j.experience_min, j.experience_max, j.education, j.openings,
+          j.work_mode, j.country, j.state, j.city, j.status, j.visibility,
+          j.job_types_list, j.published_at, j.created_at, jt.name as job_type,
+          c.id as company_id, c.name as company_name, c.slug as company_slug, c.logo_url as company_logo_url
+        FROM jobs j
+        JOIN companies c ON c.id = j.company_id
+        LEFT JOIN job_types jt ON jt.id = j.job_type_id
+        ${filters}
+        ${orderBy}
+        LIMIT ${limit} OFFSET ${offset}
+      `,
+      sql`
+        SELECT COUNT(*)::int as total
+        FROM jobs j
+        JOIN companies c ON c.id = j.company_id
+        LEFT JOIN job_types jt ON jt.id = j.job_type_id
+        ${filters}
+      `
+    ]);
+
     await sql.end();
+
+    const total = countRows[0]?.total ?? jobs.length;
 
     return c.json({
       success: true,
@@ -65,9 +106,10 @@ jobsRouter.get("/", async (c) => {
           ...row,
           job_types: Array.isArray(row.job_types_list) && row.job_types_list.length > 0 ? row.job_types_list : (row.job_type ? [row.job_type] : ["Full-time"]),
         })),
-        page: 1,
+        page,
         limit,
-        total: jobs.length,
+        total,
+        has_more: offset + jobs.length < total,
       },
     });
   } catch (error: any) {

@@ -289,7 +289,11 @@ export function Badge({ className, tone = "neutral", pulse = false, ...props }: 
         normalizedTone === "info" && "border-[#0A3A7A]/20 bg-[#0A3A7A]/10 text-[#0A3A7A] dark:border-[#60A5FA]/40 dark:bg-[#0A3A7A]/30 dark:text-[#93C5FD]",
         tone === "premium" && "border-[color-mix(in_srgb,var(--cos-primary)_30%,transparent)] bg-[color-mix(in_srgb,var(--cos-primary)_8%,var(--cos-surface-container-lowest))] text-[var(--cos-primary)] font-bold",
         tone === "featured" && "border-[color-mix(in_srgb,var(--cos-secondary)_30%,transparent)] bg-[color-mix(in_srgb,var(--cos-secondary)_8%,var(--cos-surface-container-lowest))] text-[var(--cos-secondary)]",
-        ["remote", "hybrid", "internship", "contract", "freelance"].includes(tone) && "border-blue-200 bg-blue-50 text-blue-800",
+        tone === "remote" && "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300",
+        tone === "hybrid" && "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-300",
+        tone === "internship" && "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-900/70 dark:bg-violet-950/40 dark:text-violet-300",
+        tone === "contract" && "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-900/70 dark:bg-orange-950/40 dark:text-orange-300",
+        tone === "freelance" && "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800 dark:border-fuchsia-900/70 dark:bg-fuchsia-950/40 dark:text-fuchsia-300",
         className
       )}
       {...props}
@@ -761,7 +765,7 @@ export function EnterpriseCard({ title, description, icon, badge, actions, child
   );
 }
 
-export function JobCard({ title, company, location, salary, tags = [], status, bookmarked = false, actions, href = "/jobs" }: { title: string; company: string; location?: string; salary?: string; tags?: string[]; status?: React.ReactNode; bookmarked?: boolean; actions?: React.ReactNode; href?: string }) {
+export function JobCard({ title, company, location, salary, tags = [], status, bookmarked = false, onBookmark, actions, href = "/jobs" }: { title: string; company: string; location?: string; salary?: string; tags?: string[]; status?: React.ReactNode; bookmarked?: boolean; onBookmark?: () => void; actions?: React.ReactNode; href?: string }) {
   const navigate = () => {
     if (typeof window !== "undefined") window.location.href = href;
   };
@@ -771,9 +775,14 @@ export function JobCard({ title, company, location, salary, tags = [], status, b
       navigate();
     }
   };
+  // Only render the bookmark toggle when the caller actually wires it up — a button that looks
+  // interactive but silently does nothing is worse than not having it.
+  const bookmarkButton = onBookmark ? (
+    <Button type="button" variant="ghost" size="icon" aria-label={bookmarked ? "Remove from saved jobs" : "Save job"} aria-pressed={bookmarked} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onBookmark(); }}><Star size={16} className={bookmarked ? "fill-amber-400 text-amber-400" : undefined} /></Button>
+  ) : undefined;
   return (
     <div role="link" tabIndex={0} onClick={navigate} onKeyDown={onKeyDown} className={cn("block cursor-pointer rounded-[var(--radius-career-card)]", focusRing)} aria-label={`View ${title} at ${company}`}>
-      <EnterpriseCard title={title} description={company} icon={<Briefcase size={18} />} badge={status ?? <Badge tone="remote">Open</Badge>} actions={<Button type="button" variant="ghost" size="icon" aria-label={bookmarked ? "Saved job" : "Save job"} onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}><Star size={16} className={bookmarked ? "fill-amber-400 text-amber-400" : undefined} /></Button>} disabled={false}>
+      <EnterpriseCard title={title} description={company} icon={<Briefcase size={18} />} badge={status ?? <Badge tone="remote">Open</Badge>} actions={bookmarkButton} disabled={false}>
         <div className={cn("grid gap-2 text-sm", mutedText)}>
           {location ? <span>{location}</span> : null}
           {salary ? <span>{salary}</span> : null}

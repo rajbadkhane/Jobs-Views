@@ -20,17 +20,15 @@ import {
   IndianRupee,
   List,
   MapPin,
-  Mic,
   Search,
   Share2,
   SlidersHorizontal,
-  Sparkles,
   Trash2,
   X,
   Zap
 } from "lucide-react";
 
-import { useJobsSearch } from "@career-os/hooks";
+import { useCandidateActions, useCandidateData, useJobsSearch, useSession } from "@career-os/hooks";
 import type { PublicJob } from "@career-os/shared";
 import {
   Avatar,
@@ -72,7 +70,7 @@ type SearchFilters = {
 };
 
 type FilterKey = Exclude<keyof SearchFilters, "page" | "sort">;
-type SortValue = "relevance" | "newest" | "salary_desc" | "salary_asc" | "most_applied" | "company";
+type SortValue = "relevance" | "newest" | "salary_desc" | "salary_asc" | "company";
 type ViewMode = "card" | "compact";
 type SavedFilter = { id: string; name: string; params: string };
 type Suggestion = { id: string; label: string; group: string; key: "q" | "location" | "company" | "skills"; value: string };
@@ -104,7 +102,6 @@ const sortOptions: { value: SortValue; label: string }[] = [
   { value: "newest", label: "Newest" },
   { value: "salary_desc", label: "Highest salary" },
   { value: "salary_asc", label: "Lowest salary" },
-  { value: "most_applied", label: "Most applied" },
   { value: "company", label: "Company A-Z" }
 ];
 
@@ -193,6 +190,25 @@ function jobExperience(job: SearchJob) {
   return `${job.experience_min ?? 0}–${job.experience_max} years`;
 }
 
+/**
+ * Only real, verifiable reasons a job appeared in these results — derived from the filters
+ * actually applied, never a fabricated relevance score.
+ */
+function matchReasonsFor(job: SearchJob, filters: SearchFilters): string[] {
+  const reasons: string[] = [];
+  if (filters.q.trim()) reasons.push(`Matched your search for "${filters.q.trim()}"`);
+  if (filters.skills) reasons.push(`Lists the skill "${filters.skills.replace(/-/g, " ")}"`);
+  if (filters.location.trim()) reasons.push(`Located in ${filters.location.trim()}`);
+  if (filters.mode) reasons.push(`${filters.mode === "remote" ? "Remote" : filters.mode === "hybrid" ? "Hybrid" : "On-site"} role as requested`);
+  if (filters.salary) reasons.push(`Salary meets your ₹${(Number(filters.salary) / 100000).toLocaleString("en-IN")}L+ filter`);
+  if (filters.type) reasons.push(`${job.job_type ? titleCaseWord(job.job_type) : "Matches"} employment type`);
+  return reasons;
+}
+
+function titleCaseWord(value: string) {
+  return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function postedLabel(job: SearchJob) {
   const source = job.published_at || job.created_at;
   if (!source) return "Posted date unavailable";
@@ -228,10 +244,28 @@ export function JobSearchExperience() {
   const [view, setView] = useState<ViewMode>("card");
   const [history, setHistory] = useState<string[]>([]);
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
-  const [savedJobs, setSavedJobs] = useState<string[]>([]);
+  const [localSavedJobs, setLocalSavedJobs] = useState<string[]>([]);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [shareMessage, setShareMessage] = useState("");
+
+  const session = useSession();
+  const isCandidate = session.data?.role === "JOB_SEEKER";
+  const candidateActions = useCandidateActions();
+  const serverSavedJobs = useCandidateData({
+    savedJobs: isCandidate,
+    profile: false,
+    completion: false,
+    skills: false,
+    education: false,
+    experience: false,
+    applications: false,
+    notifications: false,
+    notificationSummary: false
+  }).savedJobs;
+  // Signed-in candidates get their real, cross-device saved list; everyone else falls back to
+  // a local-only list (and is nudged to sign in when they try to save) so guests can still browse.
+  const savedJobs = isCandidate ? items<{ job_id?: string }>(serverSavedJobs.data).map((item) => item.job_id).filter((id): id is string => Boolean(id)) : localSavedJobs;
 
   const updateFilters = useCallback((patch: Partial<SearchFilters>, navigation: "push" | "replace" = "push") => {
     const next = new URLSearchParams(paramsKey);
@@ -264,40 +298,33 @@ export function JobSearchExperience() {
   useEffect(() => {
     setHistory(storageArray<string>(historyKey).slice(0, 10));
     setSavedFilters(storageArray<SavedFilter>(savedFiltersKey));
-    setSavedJobs(storageArray<string>(savedJobsKey));
+    setLocalSavedJobs(storageArray<string>(savedJobsKey));
     const storedView = window.localStorage.getItem(viewKey);
     if (storedView === "compact" || storedView === "card") setView(storedView);
   }, []);
 
   const apiQuery = useMemo(() => {
     const keywordParts = [filters.q, filters.skills.replace(/-/g, " "), filters.category.replace(/-/g, " ")].filter(Boolean);
-    const apiSort = filters.sort === "salary_desc" || filters.sort === "salary_asc" ? "salary" : filters.sort === "company" ? "company" : filters.sort === "newest" ? "latest" : "relevance";
     return {
       q: keywordParts.join(" ") || undefined,
       city: filters.location && filters.location.toLowerCase() !== "remote" ? filters.location : undefined,
       company: filters.company || undefined,
       industry: filters.industry ? filters.industry.replace(/-/g, " ") : undefined,
+      education: filters.education ? filters.education.replace(/-/g, " ") : undefined,
       salary_min: filters.salary ? Number(filters.salary) : undefined,
       experience: filters.experience === "0" ? 0 : filters.experience ? Number(filters.experience) : undefined,
       job_type: filters.type || undefined,
       work_mode: filters.location.toLowerCase() === "remote" ? "remote" : filters.mode || undefined,
       posted_days: filters.date ? Number(filters.date) : undefined,
-      sort: apiSort,
+      sort: filters.sort === "newest" ? "latest" : filters.sort,
       limit: PAGE_SIZE,
       page: filters.page
     };
   }, [filters]);
 
   const jobsQuery = useJobsSearch(apiQuery);
-  const apiJobs = items<SearchJob>(jobsQuery.data);
-  const jobs = useMemo(() => {
-    let result = filters.education
-      ? apiJobs.filter((job) => job.education?.toLowerCase().includes(filters.education.replace(/-/g, " ").toLowerCase()))
-      : [...apiJobs];
-    if (filters.sort === "salary_asc") result = result.sort((a, b) => (a.salary_min || a.salary_max || Number.MAX_SAFE_INTEGER) - (b.salary_min || b.salary_max || Number.MAX_SAFE_INTEGER));
-    if (filters.sort === "most_applied") result = result.sort((a, b) => (b.applications ?? -1) - (a.applications ?? -1));
-    return result;
-  }, [apiJobs, filters.education, filters.sort]);
+  const jobs = items<SearchJob>(jobsQuery.data);
+  const resultMeta = jobsQuery.data && typeof jobsQuery.data === "object" ? jobsQuery.data as { total?: number; has_more?: boolean } : {};
 
   const activeFilters = useMemo(() => activeFilterChips(filters), [filters]);
   const searchSummary = filters.q ? `for “${filters.q}”` : filters.location ? `in ${filters.location}` : "across India";
@@ -319,12 +346,21 @@ export function JobSearchExperience() {
 
   const toggleSavedJob = useCallback((job: SearchJob) => {
     const id = job.id || jobSlug(job);
-    setSavedJobs((current) => {
+    if (isCandidate && job.id) {
+      if (savedJobs.includes(job.id)) candidateActions.removeSavedJob.mutate(job.id);
+      else candidateActions.saveJob.mutate({ job_id: job.id });
+      return;
+    }
+    if (!session.data) {
+      router.push(`/login?next=${encodeURIComponent(`${pathname}${paramsKey ? `?${paramsKey}` : ""}`)}`);
+      return;
+    }
+    setLocalSavedJobs((current) => {
       const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
       window.localStorage.setItem(savedJobsKey, JSON.stringify(next));
       return next;
     });
-  }, []);
+  }, [candidateActions.removeSavedJob, candidateActions.saveJob, isCandidate, paramsKey, pathname, router, savedJobs, session.data]);
 
   const shareJob = useCallback(async (job: SearchJob) => {
     const url = `${window.location.origin}${jobDetailHref(job)}`;
@@ -380,6 +416,7 @@ export function JobSearchExperience() {
         updateFilters={updateFilters}
         clear={clearFilters}
         onMobileFilters={() => setFiltersOpen(true)}
+        notificationsHref={isCandidate ? "/candidate/notifications" : "/login?next=/candidate/notifications"}
       />
 
       <section className={cn(containerClass, "py-4 sm:py-5")}>
@@ -394,7 +431,7 @@ export function JobSearchExperience() {
 
           <div className="grid min-w-0 content-start gap-5">
             <ResultsHeader
-              count={jobs.length}
+              count={resultMeta.total ?? jobs.length}
               searchSummary={searchSummary}
               filterCount={activeFilters.length}
               view={view}
@@ -421,6 +458,7 @@ export function JobSearchExperience() {
                     job={job}
                     compact={view === "compact"}
                     saved={savedJobs.includes(job.id || jobSlug(job))}
+                    matchReasons={matchReasonsFor(job, filters)}
                     onPreview={() => openPreview(job)}
                     onSave={() => toggleSavedJob(job)}
                     onShare={() => void shareJob(job)}
@@ -432,11 +470,16 @@ export function JobSearchExperience() {
             )}
 
             {jobs.length ? (
-              <PaginationControls page={filters.page} hasNext={apiJobs.length === PAGE_SIZE} updateFilters={updateFilters} />
+              <PaginationControls
+                page={filters.page}
+                totalPages={resultMeta.total ? Math.max(1, Math.ceil(resultMeta.total / PAGE_SIZE)) : undefined}
+                hasNext={resultMeta.has_more ?? jobs.length === PAGE_SIZE}
+                updateFilters={updateFilters}
+              />
             ) : null}
           </div>
 
-          {jobs.length ? <aside className="hidden xl:block"><PreviewPanel job={selectedJob ?? jobs[0]} saved={savedJobs.includes((selectedJob ?? jobs[0]).id || jobSlug(selectedJob ?? jobs[0]))} onSave={() => toggleSavedJob(selectedJob ?? jobs[0])} /></aside> : null}
+          {jobs.length ? <aside className="hidden xl:block"><PreviewPanel job={selectedJob ?? jobs[0]} saved={savedJobs.includes((selectedJob ?? jobs[0]).id || jobSlug(selectedJob ?? jobs[0]))} onSave={() => toggleSavedJob(selectedJob ?? jobs[0])} filters={filters} /></aside> : null}
         </div>
       </section>
 
@@ -444,7 +487,7 @@ export function JobSearchExperience() {
         <FilterSidebar compact filters={filters} updateFilters={updateFilters} clear={clearFilters} onApply={() => setFiltersOpen(false)} />
       </Sheet>
       <Sheet open={previewOpen} title="Quick preview" onClose={() => setPreviewOpen(false)}>
-        <PreviewPanel job={selectedJob ?? jobs[0]} compact saved={selectedJob ? savedJobs.includes(selectedJob.id || jobSlug(selectedJob)) : false} onSave={() => selectedJob && toggleSavedJob(selectedJob)} />
+        <PreviewPanel job={selectedJob ?? jobs[0]} compact saved={selectedJob ? savedJobs.includes(selectedJob.id || jobSlug(selectedJob)) : false} onSave={() => selectedJob && toggleSavedJob(selectedJob)} filters={filters} />
       </Sheet>
       <Dialog open={saveDialogOpen} title="Save this search" onClose={() => setSaveDialogOpen(false)}>
         <form className="grid gap-4" onSubmit={(event) => { event.preventDefault(); saveCurrentFilters(); }}>
@@ -460,7 +503,7 @@ export function JobSearchExperience() {
   );
 }
 
-function SearchHeader({ draftQuery, draftLocation, filters, history, searching, setDraftQuery, setDraftLocation, rememberSearch, setHistory, updateFilters, clear, onMobileFilters }: {
+function SearchHeader({ draftQuery, draftLocation, filters, history, searching, setDraftQuery, setDraftLocation, rememberSearch, setHistory, updateFilters, clear, onMobileFilters, notificationsHref }: {
   draftQuery: string;
   draftLocation: string;
   filters: SearchFilters;
@@ -473,6 +516,7 @@ function SearchHeader({ draftQuery, draftLocation, filters, history, searching, 
   updateFilters: (patch: Partial<SearchFilters>, navigation?: "push" | "replace") => void;
   clear: () => void;
   onMobileFilters: () => void;
+  notificationsHref: string;
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--cos-outline-variant)] bg-[color-mix(in_srgb,var(--cos-surface-container-lowest)_96%,transparent)] backdrop-blur-xl">
@@ -483,7 +527,7 @@ function SearchHeader({ draftQuery, draftLocation, filters, history, searching, 
             <span className="text-base font-extrabold text-[#0A3A7A]">Jobs <span className="text-[#F59E0B]">View</span></span>
           </Link>
           <Button variant="outline" size="sm" className="ml-auto xl:hidden" onClick={onMobileFilters}><Filter size={15} /> Filters</Button>
-          <Button variant="ghost" size="icon" aria-label="Notifications"><Bell size={18} /></Button>
+          <Link href={notificationsHref} aria-label="Notifications" className={cn("grid h-10 w-10 place-items-center rounded-[var(--radius-career-button)] text-[var(--cos-on-surface-variant)] hover:bg-[var(--cos-surface-container-low)]", focusClass)}><Bell size={18} /></Link>
         </div>
 
         <div className="grid gap-2 md:grid-cols-[minmax(0,1.5fr)_minmax(210px,0.8fr)_auto]">
@@ -516,8 +560,6 @@ function SearchHeader({ draftQuery, draftLocation, filters, history, searching, 
           {[{ label: "Remote", value: "remote" }, { label: "Hybrid", value: "hybrid" }, { label: "On-site", value: "on_site" }].map((mode) => (
             <button key={mode.value} aria-pressed={filters.mode === mode.value} className={cn("shrink-0 rounded-full border border-[var(--cos-outline-variant)] px-3 py-1.5 text-xs font-semibold transition hover:border-[var(--cos-primary-container)] hover:text-[var(--cos-primary)]", filters.mode === mode.value && "border-[var(--cos-primary)] bg-[color-mix(in_srgb,var(--cos-primary)_9%,var(--cos-surface-container-lowest))] text-[var(--cos-primary)]", focusClass)} onClick={() => updateFilters({ mode: filters.mode === mode.value ? "" : mode.value })}>{mode.label}</button>
           ))}
-          <Badge tone="premium" className="shrink-0"><Sparkles size={13} /> AI discovery</Badge>
-          <Badge className="shrink-0"><Mic size={13} /> Voice ready</Badge>
         </div>
       </div>
     </header>
@@ -690,7 +732,7 @@ function FilterSidebar({ filters, updateFilters, clear, compact = false, onApply
 function ResultsHeader({ count, searchSummary, filterCount, view, sort, searching, onSave, setView, updateFilters, clear }: { count: number; searchSummary: string; filterCount: number; view: ViewMode; sort: SortValue; searching: boolean; onSave: () => void; setView: (view: ViewMode) => void; updateFilters: (patch: Partial<SearchFilters>) => void; clear: () => void }) {
   return (
     <Card className="grid gap-4 sm:flex sm:items-center sm:justify-between">
-      <div><h1 className="text-xl font-bold">{count.toLocaleString("en-IN")} jobs shown {searchSummary}</h1><p className="text-sm text-[var(--cos-on-surface-variant)]" role="status" aria-live="polite">{searching ? "Updating results…" : filterCount ? `${filterCount} active filter${filterCount === 1 ? "" : "s"}` : "Explore current opportunities"}</p></div>
+      <div><h1 className="text-xl font-bold">{count.toLocaleString("en-IN")} job{count === 1 ? "" : "s"} found {searchSummary}</h1><p className="text-sm text-[var(--cos-on-surface-variant)]" role="status" aria-live="polite">{searching ? "Updating results…" : filterCount ? `${filterCount} active filter${filterCount === 1 ? "" : "s"}` : "Explore current opportunities"}</p></div>
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" onClick={onSave}><Bookmark size={15} /> Save filters</Button>
         {filterCount ? <Button variant="ghost" size="sm" onClick={clear}>Clear filters</Button> : null}
@@ -702,11 +744,10 @@ function ResultsHeader({ count, searchSummary, filterCount, view, sort, searchin
   );
 }
 
-const SearchJobCard = memo(function SearchJobCard({ job, compact, saved, onPreview, onSave, onShare }: { job: SearchJob; compact: boolean; saved: boolean; onPreview: () => void; onSave: () => void; onShare: () => void }) {
+const SearchJobCard = memo(function SearchJobCard({ job, compact, saved, matchReasons, onPreview, onSave, onShare }: { job: SearchJob; compact: boolean; saved: boolean; matchReasons: string[]; onPreview: () => void; onSave: () => void; onShare: () => void }) {
   const [advisorOpen, setAdvisorOpen] = useState(false);
   const verified = Boolean(job.company_verified || job.verified_badge);
   const skills = (job.skills ?? []).map((skill) => skill.name).filter(Boolean).slice(0, compact ? 3 : 5);
-  const aiScore = 85 + ((job.id?.length ?? 7) % 12);
   return (
     <motion.article whileHover={{ y: -2 }} transition={{ duration: 0.16 }}>
       <Card className={cn("group relative overflow-hidden", compact && "p-4")}>
@@ -718,14 +759,15 @@ const SearchJobCard = memo(function SearchJobCard({ job, compact, saved, onPrevi
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link href={jobDetailHref(job)} className={cn("text-lg font-bold hover:text-[var(--cos-primary)]", focusClass)}>{job.title}</Link>
-                  <AIFitBadge score={aiScore} matchReasons={["Verified skill keyword alignment", "Matched target location & work mode", "Salary range within desired band"]} />
+                  <AIFitBadge matchReasons={matchReasons} />
                   {verified ? <Badge tone="verified"><BadgeCheck size={12} /> Verified Direct Employer</Badge> : <Badge tone="neutral">Recruiter Posted</Badge>}
-                  <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/80 dark:border-amber-700 shadow-career-xs">
-                    ⚡ &lt;24h reply
-                  </span>
                   {job.is_featured ? <Badge tone="premium">Premium</Badge> : null}
                   {job.is_urgent ? <Badge tone="urgent">Urgent</Badge> : null}
-                  <Badge tone="info">Subscriber insights</Badge>
+                  {job.recruiter_response_time ? (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/80 dark:border-amber-700 shadow-career-xs">
+                      <Zap size={11} aria-hidden="true" /> Replies within {job.recruiter_response_time}
+                    </span>
+                  ) : null}
                 </div>
                 <p className="mt-1 text-sm font-medium text-[var(--cos-on-surface-variant)]">{companyName(job)}</p>
               </div>
@@ -754,15 +796,14 @@ const SearchJobCard = memo(function SearchJobCard({ job, compact, saved, onPrevi
         open={advisorOpen}
         onOpenChange={setAdvisorOpen}
         jobTitle={job.title}
-        matchingSkills={skills.slice(0, 3)}
-        missingSkills={(job.skills ?? []).map(s => s.name).slice(3, 6).concat(["System Design", "Agile"]).slice(0, 2)}
+        matchingSkills={(job.skills ?? []).map((skill) => skill.name).filter(Boolean)}
         onProceed={() => window.location.href = plansHref(job)}
       />
     </motion.article>
   );
 });
 
-function PreviewPanel({ job, saved, onSave, compact = false }: { job?: SearchJob; saved: boolean; onSave: () => void; compact?: boolean }) {
+function PreviewPanel({ job, saved, onSave, filters, compact = false }: { job?: SearchJob; saved: boolean; onSave: () => void; filters: SearchFilters; compact?: boolean }) {
   const [advisorOpen, setAdvisorOpen] = useState(false);
   if (!job) return <EmptyState compact icon={<Briefcase size={18} />} title="Select a job" description="Choose a result to open its quick preview." />;
   const verified = Boolean(job.company_verified || job.verified_badge);
@@ -773,7 +814,7 @@ function PreviewPanel({ job, saved, onSave, compact = false }: { job?: SearchJob
         <Avatar name={companyName(job)} src={job.company_logo_url} shape="company" verified={verified} className="h-12 w-12" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap gap-2">
-            <AIFitBadge score={89} matchReasons={["Profile skill keyword overlap", "Preferred salary alignment"]} />
+            <AIFitBadge matchReasons={matchReasonsFor(job, filters)} />
             {verified ? <Badge tone="verified">Verified Direct Employer</Badge> : <Badge tone="neutral">Recruiter Posted</Badge>}
             {job.is_featured ? <Badge tone="premium">Featured</Badge> : null}
           </div>
@@ -786,24 +827,23 @@ function PreviewPanel({ job, saved, onSave, compact = false }: { job?: SearchJob
       {(job.skills ?? []).length ? <div><h3 className="text-sm font-semibold">Skills</h3><div className="mt-2 flex flex-wrap gap-2">{job.skills!.slice(0, 6).map((skill) => <Badge key={skill.name}>{skill.name}</Badge>)}</div></div> : null}
       <div className="grid grid-cols-[1fr_auto] gap-2"><Link href={jobDetailHref(job)} className={cn(primaryLinkClass, focusClass)}>View job details</Link><Button variant="outline" size="icon" aria-label={saved ? "Remove saved job" : "Save job"} aria-pressed={saved} onClick={onSave}><Bookmark size={16} className={saved ? "fill-current text-[var(--cos-primary)]" : ""} /></Button></div>
       <button type="button" onClick={() => setAdvisorOpen(true)} className={cn(secondaryLinkClass, "w-full bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-400/80 hover:border-amber-400 text-amber-900 dark:text-amber-200 font-bold", focusClass)}>
-        <Zap size={16} className="text-amber-500 fill-current animate-pulse" /> ⚡ Pre-Apply ATS Advisor &amp; Easy Apply
+        <Zap size={16} className="text-amber-500 fill-current" /> View skill checklist &amp; apply
       </button>
       <Link href={plansHref(job)} className={cn(secondaryLinkClass, "w-full opacity-90 text-xs mt-0", focusClass)}>Apply directly with subscriber insights</Link>
       <ATSAdvisorDialog
         open={advisorOpen}
         onOpenChange={setAdvisorOpen}
         jobTitle={job.title}
-        matchingSkills={skills.slice(0, 3)}
-        missingSkills={skills.slice(3, 6).concat(["System Design", "Agile"]).slice(0, 2)}
+        matchingSkills={skills}
         onProceed={() => window.location.href = plansHref(job)}
       />
     </Card>
   );
 }
 
-function PaginationControls({ page, hasNext, updateFilters }: { page: number; hasNext: boolean; updateFilters: (patch: Partial<SearchFilters>) => void }) {
+function PaginationControls({ page, totalPages, hasNext, updateFilters }: { page: number; totalPages?: number; hasNext: boolean; updateFilters: (patch: Partial<SearchFilters>) => void }) {
   return (
-    <nav className="flex items-center justify-center gap-3" aria-label="Job result pages"><Button variant="outline" disabled={page <= 1} onClick={() => updateFilters({ page: page - 1 })}>Previous</Button><span className="min-w-20 text-center text-sm font-semibold">Page {page}</span><Button variant="outline" disabled={!hasNext} onClick={() => updateFilters({ page: page + 1 })}>Next</Button></nav>
+    <nav className="flex items-center justify-center gap-3" aria-label="Job result pages"><Button variant="outline" disabled={page <= 1} onClick={() => updateFilters({ page: page - 1 })}>Previous</Button><span className="min-w-20 text-center text-sm font-semibold">Page {page}{totalPages ? ` of ${totalPages}` : ""}</span><Button variant="outline" disabled={!hasNext} onClick={() => updateFilters({ page: page + 1 })}>Next</Button></nav>
   );
 }
 

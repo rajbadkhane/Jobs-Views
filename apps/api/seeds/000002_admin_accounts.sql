@@ -4,9 +4,9 @@
 -- be rotated via the standard forgot-password flow after first login.
 INSERT INTO users (email, password_hash, is_active, is_verified, email_verified_at)
 VALUES
-    ('admin.one@jobsview.local', '$2a$10$oSeQve.KmaF.lxTimHGV.ux2p95BF64XZrhpbiOX5ITaBvaVwnVeW', TRUE, TRUE, NOW()),
-    ('admin.two@jobsview.local', '$2a$10$yMWikeNo6ogQDydpvD1vruBX0u7Mgnd2DbOg3pbu3ZdlinhuYticO', TRUE, TRUE, NOW()),
-    ('admin.three@jobsview.local', '$2a$10$JX2p08I32hRykaoXJkK5EeToj9QPA3GY9HrTB2ISQae.KvaKp9G5e', TRUE, TRUE, NOW())
+    ('admin.one@jobsview.local', '$2b$10$h5otB22EhzZENTktUUM7zOCdHwI8TcAJGl1roSGJ2IbzrXkylUhvq', TRUE, TRUE, NOW()),
+    ('admin.two@jobsview.local', '$2b$10$OGTaUNSEd72kUpFKWKSTR.9P4FO93eoIrwpZnQQ9nZ.bD4ibAcFk.', TRUE, TRUE, NOW()),
+    ('admin.three@jobsview.local', '$2b$10$xX5BBIpMz7C3QbrB5bJ7.OkHnlQ15zx2YA4LeBJYlULUrjjMtKide', TRUE, TRUE, NOW())
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO user_roles (user_id, role_id)

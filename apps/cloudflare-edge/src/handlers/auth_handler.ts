@@ -105,7 +105,8 @@ authRouter.post("/register", async (c) => {
     });
 
     // 3. Issue authentication tokens
-    const accessToken = await generateToken({ id: userId!, email, role, permissions }, c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET);
+    const SESSION_TTL_SECONDS = 72 * 3600;
+    const accessToken = await generateToken({ id: userId!, email, role, permissions }, c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET, SESSION_TTL_SECONDS);
     const refreshToken = crypto.randomUUID() + crypto.randomUUID();
     const tokenHash = await hashToken(refreshToken);
     const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
@@ -120,7 +121,7 @@ authRouter.post("/register", async (c) => {
         user: { id: userId!, email, role, is_verified: true, permissions },
         access_token: accessToken,
         refresh_token: refreshToken,
-        expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
+        expires_at: new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString(),
       },
     });
   } catch (error: any) {
@@ -181,7 +182,8 @@ authRouter.post("/login", async (c) => {
       permissions = permRows.map((row: any) => row.name);
     }
 
-    const accessToken = await generateToken({ id: user.id, email: user.email, role: user.role, permissions }, c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET, 3600);
+    const SESSION_TTL_SECONDS = 72 * 3600;
+    const accessToken = await generateToken({ id: user.id, email: user.email, role: user.role, permissions }, c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET, SESSION_TTL_SECONDS);
     const refreshToken = crypto.randomUUID() + crypto.randomUUID();
     const tokenHash = await hashToken(refreshToken);
     const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
@@ -214,7 +216,7 @@ authRouter.post("/login", async (c) => {
         user: { id: user.id, email: user.email, role: user.role, is_verified: user.is_verified, permissions },
         access_token: accessToken,
         refresh_token: refreshToken,
-        expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
+        expires_at: new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString(),
       },
     });
   } catch (error: any) {
@@ -253,14 +255,15 @@ authRouter.post("/refresh", async (c) => {
     const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
     await sql`UPDATE user_sessions SET refresh_token_hash = ${newHash}, expires_at = ${expiresAt} WHERE refresh_token_hash = ${oldHash}`;
     await sql.end();
-    const accessToken = await generateToken({ id: user.id, email: user.email, role: user.role, permissions: ["*"] }, c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET, 3600);
+    const SESSION_TTL_SECONDS = 72 * 3600;
+    const accessToken = await generateToken({ id: user.id, email: user.email, role: user.role, permissions: ["*"] }, c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET, SESSION_TTL_SECONDS);
     return c.json({
       success: true,
       data: {
         user: { id: user.id, email: user.email, role: user.role, is_verified: true, permissions: ["*"] },
         access_token: accessToken,
         refresh_token: newRefresh,
-        expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
+        expires_at: new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString(),
       },
     });
   } catch (err: any) {

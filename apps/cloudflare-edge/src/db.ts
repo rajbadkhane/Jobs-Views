@@ -16,6 +16,12 @@ export interface Env {
   BACKEND_ORIGIN?: string;
   EDGE_CACHE_TTL?: string;
   APP_ENV?: string;
+  RAZORPAY_KEY_ID?: string;
+  RAZORPAY_KEY_SECRET?: string;
+  RAZORPAY_WEBHOOK_SECRET?: string;
+  RAZORPAY_API_BASE_URL?: string;
+  RESEND_API_KEY?: string;
+  MAIL_FROM?: string;
 }
 
 /**

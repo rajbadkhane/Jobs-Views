@@ -261,11 +261,11 @@ async function run() {
         is_featured, is_urgent, job_types_list, published_at
       ) VALUES (
         ${co.id}, ${typeId[j.type] || null}, ${j.title}, ${slug}, ${j.short}, ${j.full},
-        '[]'::jsonb, ${JSON.stringify(j.requirements)}::jsonb, '[]'::jsonb, ${JSON.stringify(j.benefits)}::jsonb,
+        '[]'::jsonb, ${j.requirements}::jsonb, '[]'::jsonb, ${j.benefits}::jsonb,
         ${j.salaryMin}, ${j.salaryMax}, 'INR', ${j.period}, 'ctc',
         ${j.expMin}, ${j.expMax}, ${j.education}, ${j.openings},
         ${j.workMode}, 'India', ${co.state}, ${j.city === "Remote" ? null : j.city}, 'published', 'public',
-        ${j.featured}, ${j.urgent}, ${JSON.stringify([j.type])}::jsonb, ${publishedAt}
+        ${j.featured}, ${j.urgent}, ${[j.type]}::jsonb, ${publishedAt}
       )
       RETURNING id
     `;

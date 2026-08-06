@@ -36,7 +36,7 @@ export function JobsView({ live }: { live: AdminLive }) {
             .includes(search.toLowerCase()) &&
           (status === "all" || job.status === status) &&
           (company === "all" || job.company_name === company) &&
-          (jobType === "all" || job.job_type === jobType || (job.job_types && job.job_types.includes(jobType)) || (job.job_types_list && job.job_types_list.includes(jobType))) &&
+          (jobType === "all" || job.job_type === jobType || (Array.isArray(job.job_types) && job.job_types.includes(jobType)) || (Array.isArray(job.job_types_list) && job.job_types_list.includes(jobType))) &&
           `${job.city ?? ""} ${job.state ?? ""} ${job.country ?? ""}`
             .toLowerCase()
             .includes(location.toLowerCase()) &&
@@ -92,7 +92,7 @@ export function JobsView({ live }: { live: AdminLive }) {
       header: "Job Type",
       sortValue: (row) => row.job_type,
       cell: (row) => {
-        const list = row.job_types?.length ? row.job_types : row.job_types_list?.length ? row.job_types_list : row.job_type ? [row.job_type] : [];
+        const list = Array.isArray(row.job_types) && row.job_types.length ? row.job_types : Array.isArray(row.job_types_list) && row.job_types_list.length ? row.job_types_list : row.job_type ? [row.job_type] : [];
         return list.map((item) => titleCase(item)).join(", ");
       },
     },
@@ -184,7 +184,7 @@ export function JobsView({ live }: { live: AdminLive }) {
               options={[
                 ["all", "All job types"],
                 ...unique(
-                  all.flatMap((item) => [item.job_type, ...(item.job_types || []), ...(item.job_types_list || [])]).filter(isString),
+                  all.flatMap((item) => [item.job_type, ...(Array.isArray(item.job_types) ? item.job_types : []), ...(Array.isArray(item.job_types_list) ? item.job_types_list : [])]).filter(isString),
                 ).map((value) => [value, titleCase(value)] as [string, string]),
               ]}
             />

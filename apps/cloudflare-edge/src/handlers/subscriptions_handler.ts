@@ -172,7 +172,7 @@ async function activateOrder(sql: any, providerOrderId: string, providerPaymentI
     `;
     await tx`
       INSERT INTO candidate_subscriptions (user_id, plan_id, order_id, price_paise, currency, application_limit, entitlements, starts_at, ends_at)
-      VALUES (${order.user_id}, ${order.plan_id}, ${order.id}, ${order.amount_paise}, ${order.currency}, ${order.application_limit}, ${JSON.stringify(order.entitlements)}::jsonb, NOW(), NOW() + make_interval(days => ${order.duration_days}))
+      VALUES (${order.user_id}, ${order.plan_id}, ${order.id}, ${order.amount_paise}, ${order.currency}, ${order.application_limit}, ${order.entitlements}::jsonb, NOW(), NOW() + make_interval(days => ${order.duration_days}))
     `;
     return currentActiveSubscription(tx, order.user_id);
   });
@@ -237,7 +237,7 @@ subscriptionsRouter.post("/otp/start", authenticate(), async (c) => {
     const inserted = await sql`
       INSERT INTO candidate_subscription_orders
         (user_id, plan_id, email, next_path, amount_paise, currency, duration_days, application_limit, entitlements, otp_hash, otp_expires_at)
-      VALUES (${auth.id}, ${plan.id}, ${email}, ${next}, ${plan.price_paise}, ${plan.currency}, ${plan.duration_days}, ${plan.application_limit}, ${JSON.stringify(plan.entitlements)}::jsonb, ${otpHash}, ${expiresAt.toISOString()})
+      VALUES (${auth.id}, ${plan.id}, ${email}, ${next}, ${plan.price_paise}, ${plan.currency}, ${plan.duration_days}, ${plan.application_limit}, ${plan.entitlements}::jsonb, ${otpHash}, ${expiresAt.toISOString()})
       RETURNING id
     `;
     const orderId = inserted[0].id;
@@ -431,7 +431,7 @@ subscriptionsRouter.post("/support", authenticate(), async (c) => {
     const current = await currentActiveSubscription(sql, auth.id);
     const priority = current?.plan_slug === "premium" ? "high" : "normal";
     const planSlug = current?.plan_slug || "none";
-    const metadata = JSON.stringify({ candidate_plan: planSlug });
+    const metadata: any = { candidate_plan: planSlug };
     const inserted = await sql`
       INSERT INTO support_tickets (requester_user_id, email, ticket_type, subject, message, status, priority, metadata)
       VALUES (${auth.id}, ${auth.email}, 'ticket', ${subject}, ${message}, 'open', ${priority}, ${metadata}::jsonb)

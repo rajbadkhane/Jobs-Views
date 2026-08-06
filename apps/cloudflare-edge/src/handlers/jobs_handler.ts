@@ -192,7 +192,7 @@ jobsRouter.post("/", authenticate(), async (c) => {
         NULLIF(${Number(body.salary_min) || 0}, 0), NULLIF(${Number(body.salary_max) || 0}, 0), ${body.currency || "INR"}, ${formatSalaryPeriod(body.salary_period)}, ${body.salary_basis || "ctc"},
         ${Number(body.experience_min) || 0}, NULLIF(${Number(body.experience_max) || 0}, 0), ${body.education || "Any Graduate"}, ${Number(body.openings) || 1},
         ${formatWorkMode(body.work_mode)}, ${body.country || "IN"}, ${body.state || "India"}, ${body.city || "Multiple Cities"}, 'published', 'public',
-        ${JSON.stringify(jobTypesList)}::jsonb, NOW(), ${auth.id}
+        ${jobTypesList}::jsonb, NOW(), ${auth.id}
       )
       RETURNING *
     `;
@@ -218,7 +218,7 @@ jobsRouter.patch("/:id", authenticate(), async (c) => {
       WHERE id = ${id}
     `.catch(() => {});
     if (Array.isArray(body.job_types)) {
-      await sql`UPDATE jobs SET job_types_list = ${JSON.stringify(body.job_types)}::jsonb WHERE id = ${id}`.catch(() => {});
+      await sql`UPDATE jobs SET job_types_list = ${body.job_types}::jsonb WHERE id = ${id}`.catch(() => {});
     }
     await sql.end();
     return c.json({ success: true, message: "Job updated successfully.", data: { id, ...body } });
@@ -284,10 +284,10 @@ adminJobsRouter.post("/quick-post", async (c) => {
         ? jobData.job_types
         : [jobTypeSlug];
 
-      const responsibilitiesJSON = JSON.stringify(jobData.responsibilities || []);
-      const requirementsJSON = JSON.stringify(jobData.requirements || []);
-      const qualificationsJSON = JSON.stringify(jobData.qualifications || []);
-      const benefitsJSON = JSON.stringify(jobData.benefits || []);
+      const responsibilitiesList = jobData.responsibilities || [];
+      const requirementsList = jobData.requirements || [];
+      const qualificationsList = jobData.qualifications || [];
+      const benefitsList = jobData.benefits || [];
       const publishedAt = new Date().toISOString();
 
       const insertedJobs = await tx`
@@ -301,11 +301,11 @@ adminJobsRouter.post("/quick-post", async (c) => {
         )
         VALUES (
           ${companyId}, ${jobTypeId}, ${jobTitle}, ${jobSlug}, ${shortDescription}, ${fullDescription},
-          ${responsibilitiesJSON}::jsonb, ${requirementsJSON}::jsonb, ${qualificationsJSON}::jsonb, ${benefitsJSON}::jsonb,
+          ${responsibilitiesList}::jsonb, ${requirementsList}::jsonb, ${qualificationsList}::jsonb, ${benefitsList}::jsonb,
           NULLIF(${Number(jobData.salary_min) || 0}, 0), NULLIF(${Number(jobData.salary_max) || 0}, 0), ${currency}, ${formatSalaryPeriod(jobData.salary_period)}, ${jobData.salary_basis || "ctc"},
           ${Number(jobData.experience_min) || 0}, NULLIF(${Number(jobData.experience_max) || 0}, 0), ${jobData.education || "Any Graduate"}, ${Number(jobData.openings) || 1},
           ${workMode}, ${country}, ${state}, ${city}, 'published', 'public',
-          ${JSON.stringify(jobTypesList)}::jsonb, ${publishedAt}
+          ${jobTypesList}::jsonb, ${publishedAt}
         )
         RETURNING id
       `;

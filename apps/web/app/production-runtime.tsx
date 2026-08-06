@@ -23,7 +23,7 @@ export function ProductionRuntime() {
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
     const onSessionExpired = () => {
-      const privateRoutes = ["/dashboard", "/profile", "/applications", "/saved", "/settings", "/messages"];
+      const privateRoutes = ["/candidate"];
       const current = window.location.pathname;
       if (privateRoutes.some((route) => current.startsWith(route))) {
         window.location.href = "/session-expired";

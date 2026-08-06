@@ -1,3 +1,5 @@
+import React from "react";
+
 import { CandidateRoute, candidateMetadata } from "./route-adapter";
 
 export const metadata = candidateMetadata("dashboard");

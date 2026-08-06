@@ -1600,21 +1600,22 @@ function buildCommandItems(nav: { label: string; href: string }[], role: Command
     icon: iconForNav(item.label),
     keywords: [item.label, item.href, role]
   }));
+  const isCandidate = role === "candidate";
   const base: CommandItem[] = [
     commandItem("find-jobs", "Find jobs", "Search jobs by role, city, salary, skills, and work mode", "Jobs", "/jobs", <Briefcase size={18} />, ["remote", "hybrid", "salary", "role"]),
     commandItem("companies", "Discover companies", "Explore verified companies, open roles, and hiring teams", "Companies", "/companies", <Building2 size={18} />, ["employer", "verified", "open jobs"]),
     commandItem("guides", "Career guides", "Open interview, salary, learning, and roadmap resources", "Guides", "/career-guides", <BookOpen size={18} />, ["articles", "resources", "roadmap"]),
     commandItem("skills", "Skill intelligence", "Search skills, demand, learning paths, and certifications", "Skills", "/skill-intelligence", <ShieldCheck size={18} />, ["react", "go", "java", "certification"]),
     commandItem("salary", "Salary insights", "Compare salary by role, city, experience, and skill premium", "Salary", "/salary-insights", <Briefcase size={18} />, ["market", "city", "pay"]),
-    commandItem("notifications", "Notification center", "Open unread alerts, messages, interviews, and system updates", "Notifications", "/notifications", <Bell size={18} />, ["alerts", "unread", "updates"]),
-    commandItem("settings", "Go to settings", "Manage security, privacy, notifications, theme, and preferences", "Settings", "/settings", <Settings size={18} />, ["preferences", "privacy", "security"]),
+    commandItem("notifications", "Notification center", "Open unread alerts, messages, interviews, and system updates", "Notifications", isCandidate ? "/candidate/notifications" : "/notifications", <Bell size={18} />, ["alerts", "unread", "updates"]),
+    commandItem("settings", "Go to settings", "Manage security, privacy, notifications, theme, and preferences", "Settings", isCandidate ? "/candidate/settings" : "/settings", <Settings size={18} />, ["preferences", "privacy", "security"]),
     commandItem("theme", "Toggle theme", "Switch between light and dark mode instantly", "Commands", undefined, <Moon size={18} />, ["dark", "light", "system", "appearance"], () => document.documentElement.classList.toggle("dark")),
-    commandItem("dashboard", "Open dashboard", "Return to your workspace dashboard", "Commands", "/dashboard", <CommandIcon size={18} />, ["home", "overview"]),
+    commandItem("dashboard", "Open dashboard", "Return to your workspace dashboard", "Commands", isCandidate ? "/candidate" : "/dashboard", <CommandIcon size={18} />, ["home", "overview"]),
     commandItem("logout", "Logout", "Sign out through the existing authentication flow", "Commands", "/login", <LogOut size={18} />, ["sign out", "session"])
   ];
   const candidate = [
-    commandItem("upload-resume", "Upload resume", "Open resume tools and upload workflow", "Commands", "/resume", <Upload size={18} />, ["candidate", "pdf", "docx"]),
-    commandItem("messages", "Search messages", "Find recruiter chats, interview messages, and offer updates", "Messages", "/messages", <MessageCircle size={18} />, ["recruiter", "chat"])
+    commandItem("upload-resume", "Upload resume", "Open resume tools and upload workflow", "Commands", "/candidate/resume", <Upload size={18} />, ["candidate", "pdf", "docx"]),
+    commandItem("messages", "Search messages", "Find recruiter chats, interview messages, and offer updates", "Messages", "/candidate/messages", <MessageCircle size={18} />, ["recruiter", "chat"])
   ];
   const employer = [
     commandItem("create-job", "Create job", "Start the existing job creation workflow", "Commands", "/jobs", <Plus size={18} />, ["post", "opening", "employer"]),

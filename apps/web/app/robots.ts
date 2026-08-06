@@ -9,16 +9,8 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         disallow: [
-          "/dashboard",
-          "/profile",
+          "/candidate",
           "/resume",
-          "/applications",
-          "/saved-jobs",
-          "/messages",
-          "/notifications",
-          "/settings",
-          "/job-alerts",
-          "/recommended-jobs",
           "/api/",
           "/login",
           "/register",
@@ -39,12 +31,12 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "OAI-SearchBot",
         allow: ["/", "/jobs", "/companies", "/salary", "/skills", "/career", "/career-guides", "/career-roadmaps", "/interview", "/interview-hub", "/learning-center", "/llms.txt"],
-        disallow: ["/dashboard", "/profile", "/resume", "/applications", "/saved-jobs", "/messages", "/notifications", "/settings", "/api/", "/login", "/register"]
+        disallow: ["/candidate", "/resume", "/api/", "/login", "/register"]
       },
       {
         userAgent: "PerplexityBot",
         allow: ["/", "/jobs", "/companies", "/salary", "/skills", "/career", "/career-guides", "/career-roadmaps", "/interview", "/interview-hub", "/learning-center", "/llms.txt"],
-        disallow: ["/dashboard", "/profile", "/resume", "/applications", "/saved-jobs", "/messages", "/notifications", "/settings", "/api/"]
+        disallow: ["/candidate", "/resume", "/api/"]
       }
     ],
     sitemap: `${appConfig.siteUrl}/sitemap.xml`

@@ -61,6 +61,8 @@ export type CandidateView =
   | "recommended"
   | "notifications"
   | "messages"
+  | "interviews"
+  | "offers"
   | "strength"
   | "growth"
   | "settings"
@@ -131,6 +133,8 @@ const titles: Record<CandidateView, string> = {
   recommended: "Recommended Jobs",
   notifications: "Notifications",
   messages: "Messages",
+  interviews: "Interviews",
+  offers: "Offers",
   strength: "Profile Strength",
   growth: "Career Growth",
   settings: "Settings",
@@ -277,6 +281,8 @@ function renderView(view: CandidateView, context: CandidateContext) {
     case "settings": return <SettingsView {...context} />;
     case "alerts": return <UnsupportedView title="Job alerts are not available yet" description="The current frontend API does not expose candidate job alert records. Browse jobs and save roles in the meantime." href="/jobs" action="Browse jobs" icon={<Bell size={20} />} />;
     case "messages": return <UnsupportedView title="No messaging service is connected" description="Recruiter messages will appear here when the existing API exposes candidate conversations." href="/candidate/notifications" action="View notifications" icon={<Bell size={20} />} />;
+    case "interviews": return <UnsupportedView title="Interview scheduling isn't connected yet" description="Scheduled interview times will appear here once the platform's interview API is backed by real data. Check your application status in the meantime." href="/candidate/jobs/applied" action="View applications" icon={<Clock3 size={20} />} />;
+    case "offers": return <UnsupportedView title="Offer tracking isn't connected yet" description="Offer letters will appear here once the platform's offers API is backed by real data. Check your application status in the meantime." href="/candidate/jobs/applied" action="View applications" icon={<FileText size={20} />} />;
     case "growth": return <UnsupportedView title="Career growth data is unavailable" description="This section is hidden until the platform provides measured career-growth data for your account." href="/candidate/profile" action="Improve profile" icon={<Sparkles size={20} />} />;
   }
 }
@@ -308,7 +314,7 @@ function DashboardView(context: CandidateContext) {
   const applications = items<ApplicationItem>(context.data.applications.data);
   const saved = items<SavedJobItem>(context.data.savedJobs.data);
   const notifications = items<NotificationItem>(context.data.notifications.data);
-  const completion = completionValue(context.data.completion.data) ?? { score: 65, strength: "Good", missing_fields: [] };
+  const completion = completionValue(context.data.completion.data);
   const activity = recentActivity(applications, saved, notifications);
   const displayJobs = context.recommendations.length ? context.recommendations : context.jobs;
   
@@ -324,10 +330,10 @@ function DashboardView(context: CandidateContext) {
   };
 
   const cards = [
-    { label: "Active Jobs in Market", value: String(displayJobs.length || "500+"), icon: <Sparkles size={18} />, href: "/jobs" },
+    { label: "Jobs Shown Today", value: String(displayJobs.length), icon: <Sparkles size={18} />, href: "/jobs" },
     { label: "Applied Applications", value: String(applications.length), icon: <Briefcase size={18} />, href: "/candidate/jobs/applied" },
     { label: "Saved & Bookmarked", value: String(saved.length), icon: <Bookmark size={18} />, href: "/candidate/jobs/saved" },
-    { label: "Profile Match Score", value: `${completion.score}%`, icon: <User size={18} />, href: "/candidate/profile" }
+    { label: "Profile Completion", value: completion ? `${completion.score}%` : "Not calculated", icon: <User size={18} />, href: "/candidate/profile" }
   ];
 
   const quickTags = ["Fresher", "10th pass", "12th pass", "ITI", "Nursing home care", "Staff nurse", "Work from home", "Remote"];
@@ -439,7 +445,7 @@ function DashboardView(context: CandidateContext) {
                 icon={<Briefcase size={18} />}
                 title="Active recruitment jobs available"
                 description="Our verified hospital & tech networks are hiring across India."
-                action={<a className={linkClass} href="/jobs">Browse all 500+ job listings</a>}
+                action={<a className={linkClass} href="/jobs">Browse all job listings</a>}
               />
             )}
             {displayJobs.length > 6 ? (
@@ -479,28 +485,19 @@ function DashboardView(context: CandidateContext) {
         <div className="grid gap-6 content-start">
           <ProfileCompletionCard candidate={context.candidate} completion={completion} skills={context.skills} education={items(context.data.education.data)} experience={items(context.data.experience.data)} />
           
-          <EnterpriseCard title="Market Intelligence & Insights" description="Live job market stats tailored to your candidate profile." icon={<Building2 size={18} />} disabled={false}>
+          <EnterpriseCard title="Profile Visibility & Tips" description="Your current visibility setting and general job-search advice." icon={<Building2 size={18} />} disabled={false}>
             <div className="grid gap-4 text-sm">
               <div className="rounded-[var(--radius-career-button)] bg-[var(--cos-surface-container-low)] p-3.5">
                 <div className="flex items-center justify-between font-bold">
                   <span>Resume Visibility</span>
-                  <Badge tone="success">Active</Badge>
+                  <Badge tone={context.candidate.visibility === "public" ? "success" : "neutral"}>{context.candidate.visibility === "public" ? "Public" : "Private"}</Badge>
                 </div>
-                <p className="mt-1 text-xs text-[var(--cos-on-surface-variant)]">Your profile is viewable by verified employers and HR recruiters.</p>
-              </div>
-
-              <div className="border-t border-[var(--cos-outline-variant)] pt-3">
-                <p className="font-bold">Top Active Sectors This Week</p>
-                <ul className="mt-2 grid gap-1.5 text-xs text-[var(--cos-on-surface-variant)]">
-                  <li className="flex items-center justify-between"><span>Healthcare & Hospitals</span><span className="font-bold text-[var(--cos-on-surface)]">High Demand</span></li>
-                  <li className="flex items-center justify-between"><span>IT & AI Systems Engineering</span><span className="font-bold text-[var(--cos-on-surface)]">Trending</span></li>
-                  <li className="flex items-center justify-between"><span>Clinical Diagnostics & Nursing</span><span className="font-bold text-[var(--cos-on-surface)]">Active Hiring</span></li>
-                </ul>
+                <p className="mt-1 text-xs text-[var(--cos-on-surface-variant)]">{context.candidate.visibility === "public" ? "Your profile is viewable by employers and recruiters." : "Your profile is private and not visible to employers. Change this in Settings."}</p>
               </div>
 
               <div className="border-t border-[var(--cos-outline-variant)] pt-3">
                 <p className="font-bold">Career Upgrade Tip</p>
-                <p className="mt-1 text-xs text-[var(--cos-on-surface-variant)]">Profiles with more than 5 skills and a verified resume receive up to 4x more recruiter interview invites.</p>
+                <p className="mt-1 text-xs text-[var(--cos-on-surface-variant)]">A complete profile with skills, experience, and a verified resume gives employers a clearer picture of your candidacy.</p>
                 <a href="/candidate/profile" className={cn(linkClass, "mt-3 w-full text-xs h-9")}>Update profile skills</a>
               </div>
             </div>
@@ -796,7 +793,7 @@ function candidateRecord(value: unknown): CandidateRecord {
 function completionValue(value: unknown): Completion | undefined {
   if (!value || typeof value !== "object") return undefined;
   const record = value as Partial<Completion>;
-  return typeof record.score === "number" && typeof record.strength === "string" ? { score: record.score, strength: record.strength, missing_fields: Array.isArray(record.missing_fields) ? record.missing_fields.filter(isString) : [] } : { score: 65, strength: "Good", missing_fields: [] };
+  return typeof record.score === "number" && typeof record.strength === "string" ? { score: record.score, strength: record.strength, missing_fields: Array.isArray(record.missing_fields) ? record.missing_fields.filter(isString) : [] } : undefined;
 }
 function items<T>(value: unknown): T[] { if (Array.isArray(value)) return value as T[]; if (value && typeof value === "object" && "items" in value && Array.isArray((value as { items?: unknown }).items)) return (value as { items: T[] }).items; return []; }
 function personalForm(candidate: CandidateRecord) { return { first_name: candidate?.first_name || "", last_name: candidate?.last_name || "", title: candidate?.title || "", headline: candidate?.headline || "", bio: candidate?.bio || "", phone: candidate?.phone || "", location: candidate?.location || "", availability: candidate?.availability || "" }; }

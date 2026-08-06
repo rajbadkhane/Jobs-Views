@@ -1,3 +1,4 @@
+import React from "react";
 import type { Metadata } from "next";
 
 import { CandidatePlatform, type CandidateView } from "../components/candidate-platform";
@@ -13,6 +14,8 @@ const titles: Record<CandidateView, string> = {
   recommended: "Recommended Jobs",
   notifications: "Notifications",
   messages: "Messages",
+  interviews: "Interviews",
+  offers: "Offers",
   strength: "Career Health",
   growth: "Career Guidance",
   settings: "Candidate Settings",
@@ -40,9 +43,6 @@ export function candidateJobsView(section?: string): CandidateView {
   return "recommended";
 }
 
-export function candidateInterviewView(): CandidateView {
-  return "applications";
-}
 
 function titleCase(value: string) {
   return value.replace(/[-_]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());

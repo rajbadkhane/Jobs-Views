@@ -28,6 +28,7 @@ import {
 import React from "react";
 
 import { navigation } from "@career-os/config";
+import { useCandidateData } from "@career-os/hooks";
 import {
   AppShell,
   Avatar,
@@ -44,6 +45,55 @@ import {
 } from "@career-os/ui";
 
 import { careerIntelligence } from "../../content/career-intelligence";
+
+type CandidateRecord = { first_name?: string; last_name?: string; title?: string; headline?: string; resume_url?: string };
+type Completion = { score: number; strength: string };
+type ApplicationItem = { id?: string; job_title?: string; company_name?: string; status?: string; created_at?: string };
+type EducationItem = { qualification?: string; university?: string };
+type ExperienceItem = { title?: string; company_name?: string; is_current?: boolean };
+
+/** Real data pulled from the candidate's account, used in place of fabricated numbers wherever available. */
+type RealData = {
+  displayName: string;
+  completion?: Completion;
+  resumeUploaded: boolean;
+  applications: ApplicationItem[];
+  skills: string[];
+  latestEducation?: EducationItem;
+  latestExperience?: ExperienceItem;
+  refetch: () => void;
+  isFetching: boolean;
+};
+
+/** Marks a card/section as still using sample data rather than a real analysis of the candidate's account. */
+function PreviewBadge() {
+  return <Badge tone="neutral">Preview data</Badge>;
+}
+
+/** Banner for entire views that are still sample content end-to-end (no real scoring backend exists yet). */
+function ViewPreviewBanner({ text }: { text: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-[var(--radius-career-card)] border border-dashed border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-low)] p-4 text-sm">
+      <PreviewBadge />
+      <p className="text-[var(--cos-on-surface-variant)]">{text}</p>
+    </div>
+  );
+}
+
+function items<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (value && typeof value === "object" && "items" in value && Array.isArray((value as { items?: unknown }).items)) return (value as { items: T[] }).items;
+  return [];
+}
+function displayName(candidate: CandidateRecord) {
+  return [candidate.first_name, candidate.last_name].filter(Boolean).join(" ") || candidate.title || "Candidate";
+}
+function applicationFunnelCount(applications: ApplicationItem[], stage: "responses" | "interviews" | "offers") {
+  const status = (item: ApplicationItem) => (item.status || "").toLowerCase();
+  if (stage === "responses") return applications.filter((item) => status(item) !== "applied").length;
+  if (stage === "interviews") return applications.filter((item) => status(item).startsWith("interview")).length;
+  return applications.filter((item) => status(item).startsWith("offer")).length;
+}
 
 export type CareerView =
   | "dashboard"
@@ -101,40 +151,58 @@ const exclusiveWidgets = [
 ] as const;
 
 export function CareerIntelligencePlatform({ view }: { view: CareerView }) {
+  const data = useCandidateData({ profile: true, completion: true, skills: true, education: true, experience: true, applications: true, savedJobs: false, notifications: false, notificationSummary: false });
+  const candidate = (data.profile.data && typeof data.profile.data === "object" ? (data.profile.data as { candidate?: CandidateRecord }).candidate ?? (data.profile.data as CandidateRecord) : {}) as CandidateRecord;
+  const completionRaw = data.completion.data as Partial<Completion> | undefined;
+  const applications = items<ApplicationItem>(data.applications.data);
+  const education = items<EducationItem>(data.education.data);
+  const experience = items<ExperienceItem>(data.experience.data);
+  const skills = items<{ name?: string }>(data.skills.data).map((skill) => skill.name).filter((name): name is string => Boolean(name));
+  const real: RealData = {
+    displayName: displayName(candidate),
+    completion: typeof completionRaw?.score === "number" && typeof completionRaw.strength === "string" ? { score: completionRaw.score, strength: completionRaw.strength } : undefined,
+    resumeUploaded: Boolean(candidate.resume_url),
+    applications,
+    skills,
+    latestEducation: education[0],
+    latestExperience: experience[0],
+    refetch: () => { void data.profile.refetch(); void data.completion.refetch(); void data.applications.refetch(); },
+    isFetching: data.profile.isFetching || data.completion.isFetching || data.applications.isFetching
+  };
   return (
     <AppShell
       variant="candidate"
       title={titles[view]}
       nav={navigation.candidate}
       workspaceLabel="Career Intelligence"
-      workspaceName={careerIntelligence.profile.name}
-      workspaceDescription={careerIntelligence.profile.focus}
+      workspaceName={real.displayName}
+      workspaceDescription={candidate.headline || candidate.title || "Career profile"}
       planTitle="Jobs View"
-      planDescription="AI-ready intelligence"
+      planDescription="Career intelligence workspace"
       quickActionHref="/career-intelligence"
       actions={
         <div className="hidden items-center gap-2 sm:flex">
           <Badge tone="info"><Bot size={13} /> AI ready</Badge>
-          <Button size="sm" variant="secondary"><Sparkles size={15} /> Refresh scores</Button>
+          <Button size="sm" variant="secondary" loading={real.isFetching} disabled={real.isFetching} onClick={real.refetch}><Sparkles size={15} /> Refresh</Button>
         </div>
       }
     >
       <motion.div {...motionProps} className="grid gap-6">
-        <CareerCommandHeader view={view} />
-        {renderView(view)}
+        <CareerCommandHeader view={view} real={real} />
+        {renderView(view, real)}
       </motion.div>
     </AppShell>
   );
 }
 
-function renderView(view: CareerView) {
+function renderView(view: CareerView, real: RealData) {
   switch (view) {
     case "resume":
-      return <ResumeIntelligenceView />;
+      return <ResumeIntelligenceView real={real} />;
     case "salary":
       return <SalaryIntelligenceView />;
     case "skills":
-      return <SkillIntelligenceView />;
+      return <SkillIntelligenceView real={real} />;
     case "roadmaps":
       return <RoadmapsView />;
     case "interview":
@@ -142,68 +210,65 @@ function renderView(view: CareerView) {
     case "learning":
       return <LearningCenterView />;
     case "analytics":
-      return <CareerAnalyticsView />;
+      return <CareerAnalyticsView real={real} />;
     case "recommendations":
       return <RecommendationsView />;
     case "guides":
       return <GuidesView />;
     default:
-      return <DashboardView />;
+      return <DashboardView real={real} />;
   }
 }
 
-function CareerCommandHeader({ view }: { view: CareerView }) {
-  const mainScore = careerIntelligence.scores[0]?.value ?? 0;
+function CareerCommandHeader({ view, real }: { view: CareerView; real: RealData }) {
   return (
     <section className="relative overflow-hidden rounded-[var(--radius-career-card)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] p-5 shadow-career-sm sm:p-6">
       <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#14B8A6,#2563EB)]" aria-hidden="true" />
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-center">
         <div className="flex min-w-0 flex-wrap items-center gap-4">
-          <Avatar name={careerIntelligence.profile.name} verified className="h-16 w-16" />
+          <Avatar name={real.displayName} className="h-16 w-16" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="premium">Today&apos;s Career Status</Badge>
-              <Badge tone="success">{careerIntelligence.profile.updated}</Badge>
-              <Badge tone="info">{careerIntelligence.profile.aiState}</Badge>
+              <Badge tone="premium">Career workspace</Badge>
+              {real.resumeUploaded ? <Badge tone="success">Resume uploaded</Badge> : <Badge tone="warning">Resume missing</Badge>}
             </div>
             <h1 className="mt-3 text-2xl font-bold tracking-normal sm:text-3xl">{titles[view]}</h1>
             <p className="mt-2 max-w-4xl text-sm leading-6 text-[var(--cos-on-surface-variant)]">{descriptions[view]}</p>
             <div className="mt-3 flex flex-wrap gap-3 text-xs font-medium text-[var(--cos-on-surface-variant)]">
-              <span className="inline-flex items-center gap-1"><UserRound size={14} /> {careerIntelligence.profile.name}</span>
-              <span className="inline-flex items-center gap-1"><Target size={14} /> {careerIntelligence.profile.focus}</span>
-              <span className="inline-flex items-center gap-1"><Sparkles size={14} /> Personal AI OS</span>
+              <span className="inline-flex items-center gap-1"><UserRound size={14} /> {real.displayName}</span>
+              <span className="inline-flex items-center gap-1"><Sparkles size={14} /> {real.applications.length} application{real.applications.length === 1 ? "" : "s"} tracked</span>
             </div>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <RadialScore label="Career Score" value={mainScore} />
-          <RadialScore label="Market Demand" value={82} />
-          <RadialScore label="Streak" value={91} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <RadialScore label="Profile Completion" value={real.completion?.score ?? 0} />
+          <RadialScore label="Resume" value={real.resumeUploaded ? 100 : 0} />
         </div>
       </div>
       <div className="mt-5 flex flex-wrap gap-2">
-        {["Analyze Health", "Improve Resume", "Open Roadmap", "Salary Forecast"].map((item) => (
-          <Button key={item} size="sm" variant={item === "Analyze Health" ? "primary" : "outline"}>
-            <Sparkles size={15} />
-            {item}
-          </Button>
-        ))}
+        <a href="/candidate/resume"><Button size="sm" variant="primary"><Sparkles size={15} /> Improve resume</Button></a>
+        <a href="/candidate/profile"><Button size="sm" variant="outline"><Sparkles size={15} /> Update skills</Button></a>
+        <a href="/salary/calculator"><Button size="sm" variant="outline"><Sparkles size={15} /> Salary calculator</Button></a>
       </div>
     </section>
   );
 }
 
-function DashboardView() {
+function DashboardView({ real }: { real: RealData }) {
   return (
     <div className="grid gap-6">
-      <CommandMetrics />
-      <ExclusiveWidgets />
+      <CommandMetrics real={real} />
+      <div>
+        <div className="mb-3 flex items-center gap-2"><h2 className="text-lg font-bold">Sample intelligence widgets</h2><PreviewBadge /></div>
+        <p className="mb-4 text-sm text-[var(--cos-on-surface-variant)]">These widgets show what deeper AI-driven career analysis will look like once it&apos;s connected to real scoring. They are not calculated from your account yet.</p>
+        <ExclusiveWidgets />
+      </div>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_440px]">
         <CareerHealthPanel />
         <GoalsAndAchievements />
       </div>
       <div className="grid gap-6 xl:grid-cols-[440px_minmax(0,1fr)]">
-        <CareerTimelinePanel />
+        <CareerTimelinePanel real={real} />
         <RecommendationsPanel />
       </div>
       <div className="grid gap-4 md:grid-cols-3">
@@ -215,21 +280,24 @@ function DashboardView() {
   );
 }
 
-function CommandMetrics() {
+function CommandMetrics({ real }: { real: RealData }) {
   const metrics = [
-    ["Overall Career Score", careerIntelligence.scores[0]?.value ?? 0, "Career Health Score", Target],
-    ["Resume Score", scoreByLabel("Resume Score"), "ATS-ready signal", FileSearch],
-    ["ATS Score", careerIntelligence.resumeInsights.atsScore, "Recruiter parsing", ShieldCheck],
-    ["Salary Potential", scoreByLabel("Salary Potential"), careerIntelligence.salary.market, WalletCards],
-    ["Profile Visibility", 72, "Recruiter discovery", UserRound],
-    ["Recruiter Interest", 66, "Profile views rising", Sparkles],
-    ["Applications", 42, "Tracked this month", Briefcase],
-    ["Learning Progress", scoreByLabel("Learning Progress"), "Weekly goal active", GraduationCap]
+    ["Profile Completion", real.completion ? `${real.completion.score}%` : "Not calculated", real.completion?.strength || "Complete your profile", Target, false],
+    ["Applications Sent", String(real.applications.length), "Tracked from your account", Briefcase, false],
+    ["Interviews", String(applicationFunnelCount(real.applications, "interviews")), "From application status", CheckCircle2, false],
+    ["Offers", String(applicationFunnelCount(real.applications, "offers")), "From application status", Trophy, false],
+    ["Resume Score", scoreByLabel("Resume Score"), "Sample — ATS-ready signal", FileSearch, true],
+    ["Salary Potential", scoreByLabel("Salary Potential"), careerIntelligence.salary.market, WalletCards, true],
+    ["Profile Visibility", 72, "Sample — recruiter discovery", UserRound, true],
+    ["Learning Progress", scoreByLabel("Learning Progress"), "Sample — weekly goal", GraduationCap, true]
   ] as const;
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {metrics.map(([label, value, trend, Icon]) => (
-        <DashboardCard key={label} label={label} value={String(value)} trend={String(trend)} icon={<Icon size={18} />} />
+      {metrics.map(([label, value, trend, Icon, preview]) => (
+        <div key={label} className="relative">
+          <DashboardCard label={label} value={String(value)} trend={String(trend)} icon={<Icon size={18} />} />
+          {preview ? <span className="absolute right-3 top-3"><PreviewBadge /></span> : null}
+        </div>
       ))}
     </div>
   );
@@ -239,7 +307,7 @@ function ExclusiveWidgets() {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {exclusiveWidgets.map(([title, value, detail, Icon]) => (
-        <EnterpriseCard key={title} title={title} description={detail} icon={<Icon size={18} />} badge={<Badge tone={value >= 84 ? "success" : "info"}>{value}%</Badge>}>
+        <EnterpriseCard key={title} title={title} description={detail} icon={<Icon size={18} />} badge={<PreviewBadge />}>
           <ProgressBar value={value} />
         </EnterpriseCard>
       ))}
@@ -249,7 +317,7 @@ function ExclusiveWidgets() {
 
 function CareerHealthPanel() {
   return (
-    <EnterpriseCard title="Career Health Radar" description="Experience, education, resume, projects, skills, interview, networking, certifications, portfolio, languages, and soft skills." icon={<Brain size={18} />} badge={<Badge tone="info">0-100</Badge>}>
+    <EnterpriseCard title="Career Health Radar" description="Experience, education, resume, projects, skills, interview, networking, certifications, portfolio, languages, and soft skills." icon={<Brain size={18} />} badge={<PreviewBadge />}>
       <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
         <RadarVisual />
         <div className="grid gap-3 sm:grid-cols-2">
@@ -267,12 +335,16 @@ function CareerHealthPanel() {
   );
 }
 
-function ResumeIntelligenceView() {
+function ResumeIntelligenceView({ real }: { real: RealData }) {
   const resume = careerIntelligence.resumeInsights;
   return (
     <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
       <div className="grid gap-6">
-        <EnterpriseCard title="Resume Intelligence" description="Resume score, ATS score, keyword match, grammar, formatting, readability, and recruiter readability." icon={<FileSearch size={18} />} badge={<Badge tone="success">{resume.atsScore}%</Badge>}>
+        <EnterpriseCard title="Resume Status" description="What Jobs View actually knows about your resume today." icon={<FileSearch size={18} />} badge={<Badge tone={real.resumeUploaded ? "success" : "warning"}>{real.resumeUploaded ? "Uploaded" : "Missing"}</Badge>}>
+          {real.resumeUploaded ? <p className="text-sm text-[var(--cos-on-surface-variant)]">A resume is attached to your profile.</p> : <p className="text-sm text-[var(--cos-on-surface-variant)]">No resume uploaded yet. Upload one from your profile to complete this section.</p>}
+          <a href="/candidate/resume"><Button className="mt-3" size="sm">{real.resumeUploaded ? "Manage resume" : "Upload resume"}</Button></a>
+        </EnterpriseCard>
+        <EnterpriseCard title="Sample: Resume Score Breakdown" description="What automated ATS scoring will show once connected to a real parsing engine." icon={<FileSearch size={18} />} badge={<PreviewBadge />}>
           <RadialScore label="ATS Score" value={resume.atsScore} />
           <div className="mt-4 grid gap-3">
             <MetricStrip label="Keyword Match" value={82} />
@@ -281,11 +353,8 @@ function ResumeIntelligenceView() {
             <MetricStrip label="Recruiter Readability" value={76} />
           </div>
         </EnterpriseCard>
-        <EnterpriseCard title="Version History" description="Download, compare versions, and resume evolution timeline." icon={<ClockIcon />} actions={<Button size="sm" variant="outline">Download</Button>}>
-          <Timeline items={resume.versions.map((version, index) => ({ title: version, description: index === 0 ? "Active version" : "Comparable archive", tone: index === 0 ? "success" : "neutral" }))} />
-        </EnterpriseCard>
       </div>
-      <EnterpriseCard title="Improvement Console" description="AI suggestions placeholder, missing sections, strengths, weaknesses, and improvement timeline." icon={<Sparkles size={18} />}>
+      <EnterpriseCard title="Sample: Improvement Console" description="Example of the AI suggestions this section will surface once built." icon={<Sparkles size={18} />} badge={<PreviewBadge />}>
         <Table columns={["Area", "Signals"]} rows={[
           ["Keywords", resume.keywords.join(", ")],
           ["Missing Skills", resume.missingSkills.join(", ")],
@@ -293,13 +362,6 @@ function ResumeIntelligenceView() {
           ["Strengths", resume.strengths.join(", ")],
           ["Weaknesses", resume.weaknesses.join(", ")]
         ]} />
-        <div className="mt-5">
-          <Timeline orientation="horizontal" items={[
-            { title: "Parse", description: "ATS score generated", tone: "success" },
-            { title: "Improve", description: "Add quantified impact", tone: "info" },
-            { title: "Compare", description: "Version comparison ready", tone: "neutral" }
-          ]} />
-        </div>
       </EnterpriseCard>
     </div>
   );
@@ -308,17 +370,18 @@ function ResumeIntelligenceView() {
 function SalaryIntelligenceView() {
   return (
     <div className="grid gap-6">
+      <ViewPreviewBanner text="Salary intelligence uses sample figures. Try the real salary calculator at /salary/calculator for an estimate based on your inputs." />
       <div className="grid gap-4 md:grid-cols-4">
-        <DashboardCard label="Expected Salary" value={careerIntelligence.salary.projection} trend="Growth forecast" icon={<WalletCards size={18} />} />
-        <DashboardCard label="Current Market" value={careerIntelligence.salary.market} trend="Bengaluru median" icon={<TrendingUp size={18} />} />
-        <DashboardCard label="Current Salary" value={careerIntelligence.salary.current} trend="Baseline" icon={<Target size={18} />} />
-        <DashboardCard label="Promotion Forecast" value="74%" trend="Scope dependent" icon={<Trophy size={18} />} />
+        <DashboardCard label="Expected Salary" value={careerIntelligence.salary.projection} trend="Sample" icon={<WalletCards size={18} />} />
+        <DashboardCard label="Current Market" value={careerIntelligence.salary.market} trend="Sample" icon={<TrendingUp size={18} />} />
+        <DashboardCard label="Current Salary" value={careerIntelligence.salary.current} trend="Sample" icon={<Target size={18} />} />
+        <DashboardCard label="Promotion Forecast" value="74%" trend="Sample" icon={<Trophy size={18} />} />
       </div>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <ChartShell title="Salary Trend">
+        <ChartShell title="Salary Trend (sample)">
           <Chart data={careerIntelligence.salary.comparisons} />
         </ChartShell>
-        <EnterpriseCard title="Salary Confidence" description="Role, city, experience, skill premium, and forecast drivers." icon={<WalletCards size={18} />} badge={<Badge tone="success">88%</Badge>}>
+        <EnterpriseCard title="Salary Confidence" description="Role, city, experience, skill premium, and forecast drivers." icon={<WalletCards size={18} />} badge={<PreviewBadge />}>
           <div className="grid gap-3">
             {careerIntelligence.salary.drivers.map((item, index) => <InfoRow key={item} label={item} value={`${88 - index * 6}%`} icon={<TrendingUp size={16} />} />)}
           </div>
@@ -328,11 +391,14 @@ function SalaryIntelligenceView() {
   );
 }
 
-function SkillIntelligenceView() {
+function SkillIntelligenceView({ real }: { real: RealData }) {
   return (
     <div className="grid gap-6">
+      <EnterpriseCard title="Your Skills" description="Skills currently saved in your profile." icon={<Brain size={18} />} badge={<Badge>{real.skills.length}</Badge>}>
+        {real.skills.length ? <div className="flex flex-wrap gap-2">{real.skills.map((skill) => <Badge key={skill} tone="success">{skill}</Badge>)}</div> : <p className="text-sm text-[var(--cos-on-surface-variant)]">No skills added yet. <a className="font-semibold text-[var(--cos-primary)]" href="/candidate/profile">Add skills to your profile</a>.</p>}
+      </EnterpriseCard>
       <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
-        <EnterpriseCard title="Skill Gap" description="Demand index, trending skills, learning path, recommended skills, and progress." icon={<Brain size={18} />} badge={<Badge tone="info">Demand live-ready</Badge>}>
+        <EnterpriseCard title="Sample: Skill Gap" description="Demand index, trending skills, learning path, recommended skills, and progress." icon={<Brain size={18} />} badge={<PreviewBadge />}>
           <div className="flex flex-wrap gap-2">
             {[...careerIntelligence.skills.trending, ...careerIntelligence.skills.hotTech].map((skill) => <Badge key={skill}>{skill}</Badge>)}
           </div>
@@ -358,6 +424,7 @@ function SkillIntelligenceView() {
 function RoadmapsView() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="sm:col-span-2 xl:col-span-3"><ViewPreviewBanner text="Roadmap readiness scores and timelines shown below are sample content for each career track, not calculated from your profile." /></div>
       {careerIntelligence.roadmaps.map((roadmap) => (
         <EnterpriseCard key={roadmap.name} title={roadmap.name} description={`${roadmap.timeline} roadmap`} icon={<Rocket size={18} />} badge={<Badge tone={roadmap.readiness >= 80 ? "success" : "info"}>{roadmap.readiness}%</Badge>}>
           <div className="flex flex-wrap gap-2">{roadmap.skills.map((item) => <Badge key={item}>{item}</Badge>)}</div>
@@ -373,6 +440,7 @@ function RoadmapsView() {
 function InterviewIntelligenceView() {
   return (
     <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
+      <div className="grid gap-6 xl:col-span-2"><ViewPreviewBanner text="Interview readiness scores and question banks below are sample content, not generated from your applications or practice sessions." /></div>
       <div className="grid gap-6">
         <EnterpriseCard title="Interview Readiness" description="Mock interviews placeholder, preparation checklist, feedback, and communication score." icon={<MessageSquare size={18} />} badge={<Badge tone="warning">{careerIntelligence.interviews.readiness}%</Badge>}>
           <RadialScore label="Readiness" value={careerIntelligence.interviews.readiness} />
@@ -396,7 +464,8 @@ function InterviewIntelligenceView() {
 function LearningCenterView() {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-      <EnterpriseCard title="Learning Center" description="Roadmaps, courses, books, videos, certificates, bookmarks, progress, and calendar." icon={<GraduationCap size={18} />} badge={<Badge tone="info">Bookmarks ready</Badge>}>
+      <div className="xl:col-span-2"><ViewPreviewBanner text="Courses, progress, and the learning calendar below are sample content — Jobs View doesn't host learning content yet." /></div>
+      <EnterpriseCard title="Learning Center" description="Roadmaps, courses, books, videos, certificates, bookmarks, progress, and calendar." icon={<GraduationCap size={18} />} badge={<PreviewBadge />}>
         <div className="grid gap-3">
           {careerIntelligence.learning.map((item) => (
             <div key={item.title} className="rounded-[var(--radius-career-card)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-low)] p-4">
@@ -416,21 +485,33 @@ function LearningCenterView() {
   );
 }
 
-function CareerAnalyticsView() {
+function CareerAnalyticsView({ real }: { real: RealData }) {
+  const realMetrics = [
+    { label: "Applications", value: String(real.applications.length), detail: "From your account" },
+    { label: "Interviews", value: String(applicationFunnelCount(real.applications, "interviews")), detail: "From application status" },
+    { label: "Offers", value: String(applicationFunnelCount(real.applications, "offers")), detail: "From application status" }
+  ];
+  const sampleMetrics = careerIntelligence.analytics.filter((item) => !["Applications", "Interviews", "Offers"].includes(item.label));
   return (
     <div className="grid gap-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {careerIntelligence.analytics.map((item) => (
+        {realMetrics.map((item) => (
           <DashboardCard key={item.label} label={item.label} value={item.value} trend={item.detail} icon={<LineChart size={18} />} />
+        ))}
+        {sampleMetrics.map((item) => (
+          <div key={item.label} className="relative"><DashboardCard label={item.label} value={item.value} trend={item.detail} icon={<LineChart size={18} />} /><span className="absolute right-3 top-3"><PreviewBadge /></span></div>
         ))}
       </div>
       <div className="grid gap-6 xl:grid-cols-2">
-        <FunnelPanel />
-        <ChartShell title="Career Growth">
-          <Chart data={careerIntelligence.scores.map((score) => ({ name: score.label.split(" ")[0], value: score.value }))} />
-        </ChartShell>
+        <FunnelPanel real={real} />
+        <div className="grid gap-2">
+          <ViewPreviewBanner text="Career growth trend chart below uses sample scores." />
+          <ChartShell title="Career Growth (sample)">
+            <Chart data={careerIntelligence.scores.map((score) => ({ name: score.label.split(" ")[0], value: score.value }))} />
+          </ChartShell>
+        </div>
       </div>
-      <CareerTimelinePanel />
+      <CareerTimelinePanel real={real} />
     </div>
   );
 }
@@ -438,7 +519,8 @@ function CareerAnalyticsView() {
 function RecommendationsView() {
   return (
     <div className="grid gap-6">
-      <EnterpriseCard title="Personalized Recommendations" description="Jobs, companies, skills, courses, guides, roadmaps, and interview questions." icon={<Sparkles size={18} />} badge={<Badge tone="info">AI rank ready</Badge>}>
+      <ViewPreviewBanner text="These recommendation cards are sample content, not ranked from your profile or activity yet. Try the real job search and filters at /jobs." />
+      <EnterpriseCard title="Personalized Recommendations" description="Jobs, companies, skills, courses, guides, roadmaps, and interview questions." icon={<Sparkles size={18} />} badge={<PreviewBadge />}>
         <SearchBar placeholder="Search recommendations" suggestions={careerIntelligence.recommendationGroups.flatMap((group) => group.items).slice(0, 8)} />
       </EnterpriseCard>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -455,17 +537,13 @@ function RecommendationsView() {
 function GuidesView() {
   return (
     <div className="grid gap-6">
-      <EnterpriseCard title="Public Career Guides" description="Premium editorial experience with categories, reading time, difficulty, bookmarks, share, and related guides." icon={<BookOpen size={18} />} actions={<Button size="sm" variant="outline"><Share2 size={15} /> Share</Button>}>
+      <ViewPreviewBanner text="Full guide articles aren't published yet — these are planned titles. Bookmarking and reading time will be added once the content is live." />
+      <EnterpriseCard title="Planned Career Guides" description="Upcoming editorial guides by category." icon={<BookOpen size={18} />}>
         <SearchBar placeholder="Search career guides" suggestions={careerIntelligence.guides.map((guide) => guide.title)} />
       </EnterpriseCard>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {careerIntelligence.guides.map((guide, index) => (
-          <EnterpriseCard key={guide.title} title={guide.title} description={`${guide.type} • ${6 + index} min read • ${index % 2 ? "Advanced" : "Beginner"}`} icon={<BookOpen size={18} />} badge={<Badge tone="info">{guide.status}</Badge>}>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="secondary">Bookmark</Button>
-              <Button size="sm" variant="outline">Read</Button>
-            </div>
-          </EnterpriseCard>
+        {careerIntelligence.guides.map((guide) => (
+          <EnterpriseCard key={guide.title} title={guide.title} description={guide.type} icon={<BookOpen size={18} />} badge={<Badge tone="neutral">Coming soon</Badge>} />
         ))}
       </div>
     </div>
@@ -475,7 +553,7 @@ function GuidesView() {
 function GoalsAndAchievements() {
   return (
     <div className="grid gap-6">
-      <EnterpriseCard title="Career Goals" description="Short term, long term, weekly, monthly, milestones, and progress." icon={<Target size={18} />} badge={<Badge tone="success">Weekly goal</Badge>}>
+      <EnterpriseCard title="Career Goals" description="Short term, long term, weekly, monthly, milestones, and progress." icon={<Target size={18} />} badge={<PreviewBadge />}>
         <div className="grid gap-3">
           {[
             ["Short Term", "Improve resume keyword density", 68],
@@ -485,7 +563,7 @@ function GoalsAndAchievements() {
           ].map(([label, detail, value]) => <MetricStrip key={label as string} label={`${label}: ${detail}`} value={value as number} />)}
         </div>
       </EnterpriseCard>
-      <EnterpriseCard title="Achievements" description="Professional badge system for streaks, applications, offers, profile, resume, skills, and learning." icon={<Award size={18} />}>
+      <EnterpriseCard title="Achievements" description="Professional badge system for streaks, applications, offers, profile, resume, skills, and learning." icon={<Award size={18} />} badge={<PreviewBadge />}>
         <div className="grid gap-3 sm:grid-cols-2">
           {["Career Streak", "Profile Completed", "Resume Optimized", "Skills Added", "Learning Completed", "Interview Ready"].map((item) => (
             <div key={item} className="flex items-center gap-2 rounded-[var(--radius-career-button)] bg-[var(--cos-surface-container-low)] px-3 py-2 text-sm font-semibold">
@@ -499,17 +577,16 @@ function GoalsAndAchievements() {
   );
 }
 
-function CareerTimelinePanel() {
+function CareerTimelinePanel({ real }: { real: RealData }) {
+  const offers = applicationFunnelCount(real.applications, "offers");
   const events = [
-    { title: "Education", description: "B.Tech Computer Science", tone: "success" as const },
-    { title: "Job", description: "Senior Frontend Engineer trajectory", tone: "info" as const },
-    { title: "Project", description: "Design system migration case study", tone: "neutral" as const },
-    { title: "Certification", description: "AWS Cloud Practitioner in progress", tone: "warning" as const },
-    { title: "Application", description: "42 applications tracked", tone: "info" as const },
-    { title: "Offer", description: "2 offers and 1 negotiation", tone: "success" as const }
+    { title: "Education", description: real.latestEducation ? [real.latestEducation.qualification, real.latestEducation.university].filter(Boolean).join(" — ") : "Not added to your profile yet", tone: real.latestEducation ? "success" as const : "neutral" as const },
+    { title: "Experience", description: real.latestExperience ? [real.latestExperience.title, real.latestExperience.company_name].filter(Boolean).join(" at ") : "Not added to your profile yet", tone: real.latestExperience ? "success" as const : "neutral" as const },
+    { title: "Applications", description: `${real.applications.length} application${real.applications.length === 1 ? "" : "s"} tracked`, tone: real.applications.length ? "info" as const : "neutral" as const },
+    { title: "Offers", description: offers ? `${offers} offer${offers === 1 ? "" : "s"} received` : "No offers yet", tone: offers ? "success" as const : "neutral" as const }
   ];
   return (
-    <EnterpriseCard title="Career Timeline" description="Education, jobs, projects, certifications, achievements, applications, and offers connected." icon={<CalendarCheck size={18} />}>
+    <EnterpriseCard title="Career Timeline" description="Education, experience, applications, and offers from your account." icon={<CalendarCheck size={18} />}>
       <Timeline items={events} />
     </EnterpriseCard>
   );
@@ -517,7 +594,7 @@ function CareerTimelinePanel() {
 
 function RecommendationsPanel() {
   return (
-    <EnterpriseCard title="Recommendations" description="AI-ready ranked suggestions." icon={<Sparkles size={18} />} badge={<Badge tone="info">Placeholder</Badge>}>
+    <EnterpriseCard title="Recommendations" description="AI-ready ranked suggestions." icon={<Sparkles size={18} />} badge={<PreviewBadge />}>
       <div className="grid gap-3">
         {careerIntelligence.recommendations.map((item, index) => (
           <div key={item} className="flex gap-3 rounded-[var(--radius-career-button)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-low)] p-3 text-sm">
@@ -530,17 +607,18 @@ function RecommendationsPanel() {
   );
 }
 
-function FunnelPanel() {
+function FunnelPanel({ real }: { real: RealData }) {
   const funnel = [
-    { name: "Applications", value: 42 },
-    { name: "Responses", value: 20 },
-    { name: "Interviews", value: 7 },
-    { name: "Offers", value: 2 }
+    { name: "Applications", value: real.applications.length },
+    { name: "Responses", value: applicationFunnelCount(real.applications, "responses") },
+    { name: "Interviews", value: applicationFunnelCount(real.applications, "interviews") },
+    { name: "Offers", value: applicationFunnelCount(real.applications, "offers") }
   ];
+  const max = Math.max(1, real.applications.length);
   return (
-    <EnterpriseCard title="Application Funnel" description="Application, interview, response, and offer analytics." icon={<Briefcase size={18} />}>
+    <EnterpriseCard title="Application Funnel" description="Application, interview, response, and offer counts from your account." icon={<Briefcase size={18} />}>
       <div className="grid gap-4">
-        {funnel.map((item) => <ProgressRow key={item.name} label={item.name} value={item.value} max={42} />)}
+        {funnel.map((item) => <ProgressRow key={item.name} label={item.name} value={item.value} max={max} />)}
       </div>
     </EnterpriseCard>
   );

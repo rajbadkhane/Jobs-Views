@@ -56,7 +56,7 @@ export function PlansClient({ job, next, initialPlan }: { job?: string; next?: s
   const [supportSubject, setSupportSubject] = useState("");
   const [supportMessage, setSupportMessage] = useState("");
   const [supportStatus, setSupportStatus] = useState("");
-  const nextPath = safeNext(next || (job ? `/jobs/${job}?apply=1` : "/dashboard"));
+  const nextPath = safeNext(next || (job ? `/jobs/${job}?apply=1` : "/candidate"));
   const selectedPlan = useMemo(() => plans.data?.find((plan) => plan.slug === selected), [plans.data, selected]);
 
   if (plans.isPending) {
@@ -181,8 +181,8 @@ function planFeatures(plan: CandidatePlan) {
 }
 
 function safeNext(value?: string) {
-  const next = value?.trim() || "/dashboard";
-  return next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  const next = value?.trim() || "/candidate";
+  return next.startsWith("/") && !next.startsWith("//") ? next : "/candidate";
 }
 
 function formatDate(value?: string) {

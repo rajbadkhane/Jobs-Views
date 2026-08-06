@@ -1,7 +1,7 @@
-import { CandidateRoute, candidateInterviewView, candidateMetadata } from "../route-adapter";
+import { CandidateRoute, candidateMetadata } from "../route-adapter";
 
-export const metadata = candidateMetadata(candidateInterviewView(), "interviews");
+export const metadata = candidateMetadata("interviews");
 
 export default function Page() {
-  return <CandidateRoute view={candidateInterviewView()} />;
+  return <CandidateRoute view="interviews" />;
 }

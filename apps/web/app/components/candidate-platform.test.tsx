@@ -53,8 +53,8 @@ describe("candidate platform", () => {
 
   it("renders dashboard totals and server profile completion without invented scores", () => {
     render(<CandidatePlatform view="dashboard" />);
-    expect(screen.getByRole("link", { name: /Applied Jobs 2/i })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Saved Jobs 1/i })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Applied Applications 2/i })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Saved & Bookmarked 1/i })).toBeTruthy();
     expect(screen.getAllByText("65%").length).toBeGreaterThan(0);
     expect(screen.queryByText(/resume score/i)).toBeNull();
     expect(screen.queryByText(/interview readiness/i)).toBeNull();

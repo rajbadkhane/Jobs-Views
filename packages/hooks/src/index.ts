@@ -135,7 +135,7 @@ function errorStatus(error: unknown) {
   return response?.status;
 }
 
-function authDestination(role: string) {
+export function authDestination(role: string) {
   if (typeof window === "undefined" || role !== "JOB_SEEKER") return roleHome(role);
   const next = new URLSearchParams(window.location.search).get("next")?.trim();
   return next && next.startsWith("/") && !next.startsWith("//") ? next : roleHome(role);
@@ -248,8 +248,7 @@ export function useAuthActions() {
         },
         { accessToken: result.access_token, refreshToken: result.refresh_token }
       );
-      notify({ title: "Account created", description: "Your Jobs View account is ready.", intent: "success" });
-      if (typeof window !== "undefined") window.location.href = authDestination(result.user.role);
+      notify({ title: "Account created", description: "Enter the code we emailed you to verify your account.", intent: "success" });
     }
   });
 
@@ -279,6 +278,11 @@ export function useAuthActions() {
     forgotPassword: useMutation({ mutationFn: authApi.forgotPassword }),
     resetPassword: useMutation({ mutationFn: authApi.resetPassword }),
     verifyEmail: useMutation({ mutationFn: authApi.verifyEmail }),
+    verifyRegistrationOtp: useMutation({
+      mutationFn: authApi.verifyRegistrationOtp,
+      onSuccess: () => notify({ title: "Email verified", description: "Your account is fully verified.", intent: "success" })
+    }),
+    resendRegistrationOtp: useMutation({ mutationFn: authApi.resendRegistrationOtp }),
     refresh: useMutation({ mutationFn: authApi.refresh })
   };
 }

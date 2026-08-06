@@ -2,11 +2,17 @@ import { Hono } from "hono";
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { getDb, Env } from "../db";
-import { sendMail, resetPasswordEmailHTML } from "../lib/mail";
+import { sendMail, resetPasswordEmailHTML, registrationOtpEmailHTML } from "../lib/mail";
 
 export const authRouter = new Hono<{ Bindings: Env }>();
 
 const DEFAULT_SECRET = "jv_prod_jwt_access_8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e";
+
+function numericOTP(length: number): string {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b) => (b % 10).toString()).join("");
+}
 
 function slugify(text: string): string {
   return text
@@ -74,7 +80,7 @@ authRouter.post("/register", async (c) => {
     await sql.begin(async (tx: any) => {
       const newUser = await tx`
         INSERT INTO users (email, password_hash, is_active, is_verified)
-        VALUES (${email}, ${passwordHash}, true, true)
+        VALUES (${email}, ${passwordHash}, true, false)
         RETURNING id
       `;
       userId = newUser[0].id;
@@ -114,12 +120,21 @@ authRouter.post("/register", async (c) => {
 
     await sql`INSERT INTO user_sessions (user_id, refresh_token_hash, user_agent, ip_address, expires_at) VALUES (${userId!}, ${tokenHash}, ${userAgent}, NULLIF(${ip}, '')::inet, ${expiresAt})`.catch(() => {});
     await sql`INSERT INTO login_history (user_id, email, ip_address, user_agent, success, reason) VALUES (${userId!}, ${email}, NULLIF(${ip}, '')::inet, ${userAgent}, true, 'registration')`.catch(() => {});
+
+    // 4. Send a verification OTP to the registered email (best-effort — never block registration on mail delivery)
+    const otp = numericOTP(6);
+    const otpHash = await hashToken(otp);
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    await sql`UPDATE users SET registration_otp_hash = ${otpHash}, registration_otp_expires_at = ${otpExpiresAt}, registration_otp_attempts = 0 WHERE id = ${userId!}`.catch(() => {});
+    await sendMail(c.env, email, "Verify your Jobs View account", registrationOtpEmailHTML(otp)).catch((err) => {
+      console.error("[Edge Auth Register OTP Mail Error]:", err?.message);
+    });
     await sql.end();
 
     return c.json({
       success: true,
       data: {
-        user: { id: userId!, email, role, is_verified: true, permissions },
+        user: { id: userId!, email, role, is_verified: false, permissions },
         access_token: accessToken,
         refresh_token: refreshToken,
         expires_at: new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString(),
@@ -128,6 +143,102 @@ authRouter.post("/register", async (c) => {
   } catch (error: any) {
     console.error("[Edge Auth Register Error]:", error.message);
     return c.json({ success: false, error: { code: 500, message: "Registration failed at edge", details: error.message } }, 500);
+  }
+});
+
+/**
+ * POST /api/v1/auth/verify-registration-otp
+ * Confirms the 6-digit code emailed at signup and marks the account as verified.
+ */
+authRouter.post("/verify-registration-otp", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const email = (body.email || "").toString().trim().toLowerCase();
+    const otp = (body.otp || "").toString().trim();
+    if (!email || !/^\d{6}$/.test(otp)) {
+      return c.json({ success: false, error: { code: 400, message: "A valid email and 6 digit code are required." } }, 400);
+    }
+
+    const sql = getDb(c.env);
+    const rows = await sql`
+      SELECT id, is_verified, registration_otp_hash, registration_otp_expires_at, registration_otp_attempts
+      FROM users WHERE email = ${email} AND deleted_at IS NULL LIMIT 1
+    `;
+    if (rows.length === 0) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 404, message: "Account not found." } }, 404);
+    }
+    const user = rows[0];
+    if (user.is_verified) {
+      await sql.end();
+      return c.json({ success: true, message: "Account already verified." });
+    }
+    if (!user.registration_otp_hash || !user.registration_otp_expires_at || new Date() > new Date(user.registration_otp_expires_at)) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 401, message: "The code is invalid or expired. Request a new one." } }, 401);
+    }
+    if (user.registration_otp_attempts >= 5) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 403, message: "Too many attempts. Request a new code." } }, 403);
+    }
+
+    const otpHash = await hashToken(otp);
+    if (otpHash !== user.registration_otp_hash) {
+      await sql`UPDATE users SET registration_otp_attempts = registration_otp_attempts + 1 WHERE id = ${user.id}`.catch(() => {});
+      await sql.end();
+      return c.json({ success: false, error: { code: 401, message: "The code is invalid or expired." } }, 401);
+    }
+
+    await sql`
+      UPDATE users SET is_verified = true, email_verified_at = NOW(),
+        registration_otp_hash = NULL, registration_otp_expires_at = NULL, registration_otp_attempts = 0
+      WHERE id = ${user.id}
+    `;
+    await sql.end();
+    return c.json({ success: true, message: "Email verified." });
+  } catch (error: any) {
+    return c.json({ success: false, error: { code: 500, message: "Verification failed", details: error.message } }, 500);
+  }
+});
+
+/**
+ * POST /api/v1/auth/resend-registration-otp
+ * Issues a fresh 6-digit code, rate-limited to once every 45 seconds per account.
+ */
+authRouter.post("/resend-registration-otp", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const email = (body.email || "").toString().trim().toLowerCase();
+    if (!email) {
+      return c.json({ success: false, error: { code: 400, message: "Email is required." } }, 400);
+    }
+
+    const sql = getDb(c.env);
+    const rows = await sql`SELECT id, is_verified, registration_otp_expires_at FROM users WHERE email = ${email} AND deleted_at IS NULL LIMIT 1`;
+    if (rows.length === 0) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 404, message: "Account not found." } }, 404);
+    }
+    const user = rows[0];
+    if (user.is_verified) {
+      await sql.end();
+      return c.json({ success: true, message: "Account already verified." });
+    }
+    const lastSentAt = user.registration_otp_expires_at ? new Date(user.registration_otp_expires_at).getTime() - 10 * 60 * 1000 : 0;
+    if (Date.now() - lastSentAt < 45 * 1000) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 429, message: "Please wait before requesting another code." } }, 429);
+    }
+
+    const otp = numericOTP(6);
+    const otpHash = await hashToken(otp);
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    await sql`UPDATE users SET registration_otp_hash = ${otpHash}, registration_otp_expires_at = ${otpExpiresAt}, registration_otp_attempts = 0 WHERE id = ${user.id}`;
+    await sql.end();
+    await sendMail(c.env, email, "Verify your Jobs View account", registrationOtpEmailHTML(otp));
+    return c.json({ success: true, message: "Verification code sent." });
+  } catch (error: any) {
+    return c.json({ success: false, error: { code: 500, message: "Failed to resend code", details: error.message } }, 500);
   }
 });
 

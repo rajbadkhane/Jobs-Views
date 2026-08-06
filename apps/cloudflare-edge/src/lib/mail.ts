@@ -43,6 +43,12 @@ export function otpEmailHTML(otp: string, planName: string): string {
   )}</p><p>This code expires in 10 minutes. Jobs View never asks for this code by phone.</p></div>`;
 }
 
+export function registrationOtpEmailHTML(otp: string): string {
+  return `<div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#0f172a"><h2>Verify your Jobs View account</h2><p>Use this code to confirm your email address and finish setting up your account.</p><p style="font-size:28px;font-weight:800;letter-spacing:6px;color:#0A3A7A">${escapeHtml(
+    otp
+  )}</p><p>This code expires in 10 minutes. Jobs View never asks for this code by phone.</p></div>`;
+}
+
 export function resetPasswordEmailHTML(resetUrl: string): string {
   return `<div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#0f172a"><h2>Reset your Jobs View password</h2><p>We received a request to reset your password. Click the button below to choose a new one. This link expires in 30 minutes.</p><p style="margin:24px 0"><a href="${escapeHtml(
     resetUrl

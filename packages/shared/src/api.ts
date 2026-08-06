@@ -226,6 +226,8 @@ export const authApi = {
   forgotPassword: (payload: { email: string }) => request<{ reset_token?: string } | null>(api, { method: "POST", url: "/auth/forgot-password", data: payload }),
   resetPassword: (payload: { token: string; password: string }) => request<null>(api, { method: "POST", url: "/auth/reset-password", data: payload }),
   verifyEmail: (token: string) => request<null>(api, { method: "GET", url: "/auth/verify", params: { token } }),
+  verifyRegistrationOtp: (payload: { email: string; otp: string }) => request<null>(api, { method: "POST", url: "/auth/verify-registration-otp", data: payload }),
+  resendRegistrationOtp: (payload: { email: string }) => request<null>(api, { method: "POST", url: "/auth/resend-registration-otp", data: payload }),
   me: () => request<AuthUser & { permissions: string[] }>(api, { method: "GET", url: "/me" })
 };
 

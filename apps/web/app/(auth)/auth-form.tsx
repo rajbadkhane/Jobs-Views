@@ -24,11 +24,13 @@ import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { z as zod } from "zod";
 
-import { useAuthActions } from "@career-os/hooks";
+import { authDestination, useAuthActions } from "@career-os/hooks";
 import { appConfig } from "@career-os/config";
 import { emailSchema, loginSchema, registerSchema, resetPasswordSchema } from "@career-os/shared";
 import { Button, Card, EnterpriseCard, FormStepper, Input, PasswordInput, UploadDropzone } from "@career-os/ui";
 import { cn } from "@career-os/utils";
+
+import { RegistrationOtpModal } from "./registration-otp-modal";
 
 type AuthMode = "login" | "register" | "forgot" | "reset" | "verify";
 
@@ -49,6 +51,8 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const [localError, setLocalError] = useState("");
   const [validationNotice, setValidationNotice] = useState("");
   const [nextPath, setNextPath] = useState("");
+  const [otpEmail, setOtpEmail] = useState("");
+  const [registeredRole, setRegisteredRole] = useState<"EMPLOYER" | "JOB_SEEKER">("JOB_SEEKER");
   useEffect(() => {
     const value = new URLSearchParams(window.location.search).get("next")?.trim() ?? "";
     setNextPath(value.startsWith("/") && !value.startsWith("//") ? value : "");
@@ -125,8 +129,9 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       };
       const cleanName = (payload.name || "User").trim();
       const [firstName, ...rest] = cleanName.split(" ");
+      const cleanEmail = payload.email.trim().toLowerCase();
       await auth.register.mutateAsync({
-        email: payload.email.trim().toLowerCase(),
+        email: cleanEmail,
         password: payload.password,
         role: payload.role,
         first_name: firstName || "User",
@@ -137,6 +142,8 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
         gst_number: payload.gstNumber,
         cin_number: payload.cinNumber
       });
+      setRegisteredRole(payload.role);
+      setOtpEmail(cleanEmail);
     }
     if (mode === "forgot") await auth.forgotPassword.mutateAsync(values as { email: string });
     if (mode === "reset") await auth.resetPassword.mutateAsync(values as { token: string; password: string });
@@ -150,8 +157,14 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     });
   }
 
+  function completeRegistration() {
+    setOtpEmail("");
+    if (typeof window !== "undefined") window.location.href = authDestination(registeredRole);
+  }
+
   return (
     <section className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-[1440px] gap-8 px-[max(1rem,env(safe-area-inset-left))] py-6 pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 lg:grid-cols-[minmax(0,1fr)_520px] lg:px-8">
+      {otpEmail ? <RegistrationOtpModal email={otpEmail} onDone={completeRegistration} /> : null}
       <AuthStory mode={mode} />
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: "easeOut" }} className="flex items-center justify-center">
         <Card className="w-full max-w-xl p-5 sm:p-6 lg:p-7">

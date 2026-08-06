@@ -58,6 +58,7 @@ export const navigation = {
   ],
   candidate: [
     { label: "Dashboard", href: "/candidate" },
+    { label: "Find Jobs", href: "/candidate/jobs/recommended" },
     { label: "Profile", href: "/candidate/profile" },
     { label: "Resume", href: "/candidate/resume" },
     { label: "Applications", href: "/candidate/jobs/applied" },

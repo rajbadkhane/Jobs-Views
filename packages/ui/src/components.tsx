@@ -986,7 +986,7 @@ function navSectionFor(label: string, variant: AppShellVariant) {
     if (["Team", "Analytics", "Billing"].includes(label)) return "Workspace";
     return "Support";
   }
-  if (["Dashboard", "Profile", "Applications", "Resume", "Saved Jobs", "Recently Viewed", "Job Alerts", "Messages"].includes(label)) return "Main";
+  if (["Dashboard", "Find Jobs", "Profile", "Applications", "Resume", "Saved Jobs", "Recently Viewed", "Job Alerts", "Messages"].includes(label)) return "Main";
   if (["Career Health", "Career Growth", "Career Intelligence", "Resume Insights", "Salary", "Salary Insights", "Skill Intelligence", "Roadmaps", "Guidance", "Interviews", "Interview Hub", "Learning Center", "Career Analytics", "Offers"].includes(label)) return "Career";
   return "Account";
 }

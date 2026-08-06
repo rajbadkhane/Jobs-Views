@@ -176,7 +176,7 @@ export function CandidatePlatform({ view }: { view: CandidateView }) {
   const matched = useMemo(() => hasRecommendationSignals
     ? rankedJobs.filter((result) => result.match.score > 0).map((result) => result.job.source)
     : [], [hasRecommendationSignals, rankedJobs]);
-  const recommendations = useMemo(() => matched.length > 0 ? matched : jobs.slice(0, 12), [matched, jobs]);
+  const recommendations = useMemo(() => matched.length > 0 ? matched : jobs, [matched, jobs]);
   const queries = queriesForView(view, data, jobsQuery);
   const failed = data.profile.isError && !data.profile.data ? data.profile : undefined;
   const notifications = items<NotificationItem>(data.notifications.data);
@@ -204,7 +204,7 @@ export function CandidatePlatform({ view }: { view: CandidateView }) {
       ) : (
         <motion.div {...viewMotion} className="grid gap-6">
           <CandidateHeader candidate={candidate} completion={completionValue(data.completion.data)} />
-          {renderView(view, { data, actions, candidate, skills, jobs, recommendations, recentJobs })}
+          {renderView(view, { data, actions, candidate, skills, jobs, recommendations, recentJobs, hasRecommendationSignals })}
         </motion.div>
       )}
     </AppShell>
@@ -219,6 +219,7 @@ type CandidateContext = {
   jobs: PublicJob[];
   recommendations: PublicJob[];
   recentJobs: RecentJob[];
+  hasRecommendationSignals: boolean;
 };
 type QueryState = { isPending: boolean; isError: boolean; isFetching: boolean; error: unknown; refetch: () => unknown };
 
@@ -267,7 +268,7 @@ function renderView(view: CandidateView, context: CandidateContext) {
     case "applications": return <ApplicationsView {...context} />;
     case "saved": return <SavedJobsView {...context} />;
     case "recent": return <RecentJobsView jobs={context.recentJobs} />;
-    case "recommended": return <RecommendedJobsView jobs={context.recommendations} actions={context.actions} />;
+    case "recommended": return <RecommendedJobsView jobs={context.recommendations} actions={context.actions} matched={context.hasRecommendationSignals} />;
     case "notifications": return <NotificationsView {...context} />;
     case "strength": return <ProfileStrengthView {...context} />;
     case "settings": return <SettingsView {...context} />;
@@ -625,13 +626,17 @@ function RecentJobCard({ job }: { job: RecentJob }) {
   return <JobCard title={job.title} company={job.company_name} location={[job.city, job.state].filter(Boolean).join(", ")} salary={jobSalary(job)} tags={[job.work_mode, job.job_type].filter(isString)} href={`/jobs/${encodeURIComponent(job.slug)}`} status={<Badge>{`Viewed ${formatDate(job.viewed_at)}`}</Badge>} />;
 }
 
-function RecommendedJobsView({ jobs, actions }: { jobs: PublicJob[]; actions: ReturnType<typeof useCandidateActions> }) {
-  if (!jobs.length) return <EmptyState icon={<Sparkles size={18} />} title="No supported recommendations yet" description="Add skills and location to your profile so existing job results can be matched to your profile." action={<a className={linkClass} href="/candidate/profile">Complete profile</a>} />;
-  return <RecommendedSection jobs={jobs} actions={actions} />;
+function RecommendedJobsView({ jobs, actions, matched }: { jobs: PublicJob[]; actions: ReturnType<typeof useCandidateActions>; matched: boolean }) {
+  if (!jobs.length) return <EmptyState icon={<Sparkles size={18} />} title="No open jobs right now" description="Check back soon, or browse the full jobs board." action={<a className={linkClass} href="/jobs">Browse jobs</a>} />;
+  return <RecommendedSection jobs={jobs} actions={actions} matched={matched} />;
 }
 
-function RecommendedSection({ jobs, actions }: { jobs: PublicJob[]; actions: ReturnType<typeof useCandidateActions> }) {
-  return <EnterpriseCard title="Recommended Jobs" description="Published jobs ranked from the skills and location currently saved in your profile." icon={<Sparkles size={18} />} actions={<a className={linkClass} href="/candidate/jobs/recommended">View all</a>} disabled={false}><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{jobs.map((job) => <JobCard key={job.id} title={job.title} company={job.company_name} location={[job.city, job.state].filter(Boolean).join(", ")} salary={jobSalary(job)} tags={(job.skills || []).slice(0, 3).map((skill) => skill.name)} href={`/jobs/${encodeURIComponent(job.slug)}`} actions={<>{job.id ? <Button size="sm" loading={actions.saveJob.isPending} disabled={actions.saveJob.isPending} onClick={() => actions.saveJob.mutate({ job_id: job.id })}><Bookmark size={15} /> Save</Button> : null}<a className={linkClass} href={`/jobs/${encodeURIComponent(job.slug)}`}>View job</a></>} />)}</div></EnterpriseCard>;
+function RecommendedSection({ jobs, actions, matched }: { jobs: PublicJob[]; actions: ReturnType<typeof useCandidateActions>; matched: boolean }) {
+  const title = matched ? "Recommended Jobs" : "Find Jobs";
+  const description = matched
+    ? "Published jobs ranked from the skills and location currently saved in your profile."
+    : "Showing all open jobs. Add skills and location to your profile to see roles matched to you instead.";
+  return <EnterpriseCard title={title} description={description} icon={<Sparkles size={18} />} actions={!matched ? <a className={linkClass} href="/candidate/profile">Complete profile</a> : undefined} disabled={false}><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{jobs.map((job) => <JobCard key={job.id} title={job.title} company={job.company_name} location={[job.city, job.state].filter(Boolean).join(", ")} salary={jobSalary(job)} tags={(job.skills || []).slice(0, 3).map((skill) => skill.name)} href={`/jobs/${encodeURIComponent(job.slug)}`} actions={<>{job.id ? <Button size="sm" loading={actions.saveJob.isPending} disabled={actions.saveJob.isPending} onClick={() => actions.saveJob.mutate({ job_id: job.id })}><Bookmark size={15} /> Save</Button> : null}<a className={linkClass} href={`/jobs/${encodeURIComponent(job.slug)}`}>View job</a></>} />)}</div></EnterpriseCard>;
 }
 
 function ProfileView(context: CandidateContext & { readOnly?: boolean }) {

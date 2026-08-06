@@ -228,7 +228,7 @@ export const authApi = {
   verifyEmail: (token: string) => request<null>(api, { method: "GET", url: "/auth/verify", params: { token } }),
   verifyRegistrationOtp: (payload: { email: string; otp: string }) => request<null>(api, { method: "POST", url: "/auth/verify-registration-otp", data: payload }),
   resendRegistrationOtp: (payload: { email: string }) => request<null>(api, { method: "POST", url: "/auth/resend-registration-otp", data: payload }),
-  me: () => request<AuthUser & { permissions: string[] }>(api, { method: "GET", url: "/me" })
+  me: () => request<AuthUser & { permissions: string[] }>(api, { method: "GET", url: "/users/me" })
 };
 
 export const userApi = {

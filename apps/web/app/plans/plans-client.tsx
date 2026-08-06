@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, IndianRupee, LockKeyhole, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { CheckCircle2, IndianRupee, Sparkles, Zap } from "lucide-react";
 
 import { appConfig } from "@career-os/config";
 import { useCandidatePlans, useCandidateSubscription, useSession, useSubscriptionActions } from "@career-os/hooks";
@@ -47,9 +47,6 @@ export function PlansClient({ job, next, initialPlan }: { job?: string; next?: s
   const subscription = useCandidateSubscription(Boolean(session.data?.id && session.data.role === "JOB_SEEKER"));
   const actions = useSubscriptionActions();
   const [selected, setSelected] = useState(initialPlan === "premium" ? "premium" : "basic");
-  const [checkoutID, setCheckoutID] = useState("");
-  const [maskedEmail, setMaskedEmail] = useState("");
-  const [otp, setOtp] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [paying, setPaying] = useState(false);
@@ -80,23 +77,10 @@ export function PlansClient({ job, next, initialPlan }: { job?: string; next?: s
       setError("A candidate account is required to purchase a candidate plan.");
       return;
     }
-    try {
-      const result = await actions.startOtp.mutateAsync({ plan_slug: plan.slug, next: nextPath });
-      setCheckoutID(result.checkout_id);
-      setMaskedEmail(result.email_masked);
-      setStatus(`A 6 digit code was sent to ${result.email_masked}.`);
-    } catch (err) {
-      setError(apiErrorMessage(err));
-    }
-  }
-
-  async function verifyAndPay() {
-    if (!checkoutID || otp.length !== 6 || paying) return;
-    setError("");
-    setStatus("Verifying your code...");
     setPaying(true);
+    setStatus("Preparing secure checkout...");
     try {
-      const checkout = await actions.verifyOtp.mutateAsync({ checkout_id: checkoutID, otp });
+      const checkout = await actions.startCheckout.mutateAsync({ plan_slug: plan.slug, next: nextPath });
       await openRazorpay(checkout, async (payment) => {
         setStatus("Confirming payment securely...");
         try {
@@ -158,12 +142,12 @@ export function PlansClient({ job, next, initialPlan }: { job?: string; next?: s
             <div className="mt-5 flex items-end gap-2"><IndianRupee size={24} className="mb-1 text-[var(--cos-primary)]" /><span className="text-4xl font-extrabold">{plan.price_paise / 100}</span><span className="mb-1 text-sm text-[var(--cos-on-surface-variant)]">final price</span></div>
             <p className="mt-3 text-sm leading-6 text-[var(--cos-on-surface-variant)]">{premium ? "Complete job-search, resume, interview, salary, and learning support." : "Essential tools and up to 10 job applications for one focused month."}</p>
             <div className="mt-6 grid gap-3">{features.map((feature) => <div key={feature} className="flex items-start gap-2 text-sm font-semibold"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" />{feature}</div>)}</div>
-            <Button className="mt-8" variant={premium ? "gradient" : "primary"} loading={actions.startOtp.isPending && selected === plan.slug} disabled={actions.startOtp.isPending || paying} onClick={() => void continueWithPlan(plan)}><Zap size={16} /> Choose {plan.name}</Button>
+            <Button className="mt-8" variant={premium ? "gradient" : "primary"} loading={paying && selected === plan.slug} disabled={paying} onClick={() => void continueWithPlan(plan)}><Zap size={16} /> Choose {plan.name}</Button>
           </Card>;
         })}
       </section>
 
-      {checkoutID ? <section className="mx-auto max-w-2xl px-4 pb-12 sm:px-6"><Card className="border-2 border-[var(--cos-primary)]"><div className="flex gap-3"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--cos-primary)] text-white"><ShieldCheck size={18} /></div><div><h2 className="text-xl font-bold">Confirm your account email</h2><p className="mt-1 text-sm text-[var(--cos-on-surface-variant)]">Enter the code sent to {maskedEmail}. Payment opens only after verification.</p></div></div><form className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={(event) => { event.preventDefault(); void verifyAndPay(); }}><Input label="6 digit OTP" inputMode="numeric" autoComplete="one-time-code" prefix={<LockKeyhole size={16} />} value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))} maxLength={6} required disabled={paying} /><Button className="self-end" type="submit" loading={paying} disabled={otp.length !== 6 || paying}>Verify and pay</Button></form>{status ? <div role="status" aria-live="polite" className="mt-4 rounded-md bg-blue-50 p-3 text-sm font-semibold text-blue-800 dark:bg-blue-950/40 dark:text-blue-200">{status}</div> : null}{error ? <div role="alert" className="mt-4 rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-200">{error}</div> : null}</Card></section> : null}
+      {status || error ? <section className="mx-auto max-w-2xl px-4 pb-12 sm:px-6">{status ? <div role="status" aria-live="polite" className="rounded-md bg-blue-50 p-3 text-sm font-semibold text-blue-800 dark:bg-blue-950/40 dark:text-blue-200">{status}</div> : null}{error ? <div role="alert" className="mt-3 rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-200">{error}</div> : null}</section> : null}
 
       {subscription.data?.active ? <section className="mx-auto max-w-2xl px-4 pb-12 sm:px-6"><Card><h2 className="text-xl font-bold">Candidate support</h2><p className="mt-1 text-sm leading-6 text-[var(--cos-on-surface-variant)]">Send a question to the Jobs View support team. This is email or ticket support, not live coaching or a placement guarantee.</p><form className="mt-5 grid gap-4" onSubmit={(event) => { event.preventDefault(); void requestSupport(); }}><Input label="Subject" value={supportSubject} onChange={(event) => setSupportSubject(event.target.value)} minLength={3} maxLength={255} required /><label className="grid gap-2 text-sm font-semibold">Message<textarea className="min-h-32 rounded-[var(--radius-career-input)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] p-3 font-normal outline-none focus:border-[var(--cos-primary)] focus:ring-2 focus:ring-[var(--cos-focus-ring)]" value={supportMessage} onChange={(event) => setSupportMessage(event.target.value)} minLength={10} maxLength={4000} required /></label><Button type="submit" loading={actions.support.isPending} disabled={actions.support.isPending || supportSubject.trim().length < 3 || supportMessage.trim().length < 10}>Send support request</Button></form>{supportStatus ? <div role="status" aria-live="polite" className="mt-4 rounded-md bg-[var(--cos-surface-container-low)] p-3 text-sm font-semibold">{supportStatus}</div> : null}</Card></section> : null}
     </main>

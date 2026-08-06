@@ -429,6 +429,8 @@ export const subscriptionApi = {
     request<{ checkout_id: string; email_masked: string; plan_slug: string; expires_at: string }>(api, { method: "POST", url: "/subscriptions/otp/start", data: payload }),
   verifyOtp: (payload: { checkout_id: string; otp: string }) =>
     request<CandidateCheckout>(api, { method: "POST", url: "/subscriptions/otp/verify", data: payload }),
+  startCheckout: (payload: { plan_slug: string; next?: string }) =>
+    request<CandidateCheckout>(api, { method: "POST", url: "/subscriptions/checkout", data: payload }),
   verifyPayment: (payload: { checkout_id: string; razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) =>
     request<CandidatePaymentResult>(api, { method: "POST", url: "/subscriptions/payment/verify", data: payload }),
   order: (checkoutId: string) => request<{ checkout_id: string; status: string; next: string }>(api, { method: "GET", url: `/subscriptions/orders/${checkoutId}` }),

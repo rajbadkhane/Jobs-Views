@@ -262,6 +262,88 @@ subscriptionsRouter.post("/otp/start", authenticate(), async (c) => {
   }
 });
 
+/**
+ * POST /api/v1/subscriptions/checkout
+ * Starts checkout directly for an already-authenticated candidate, skipping the email OTP
+ * step (the session itself already proves account ownership) and opening Razorpay immediately.
+ */
+subscriptionsRouter.post("/checkout", authenticate(), async (c) => {
+  const gate = requireCandidate(c);
+  if (!gate.ok) return gate.res;
+  const auth = getCurrentUser(c);
+  const body = await c.req.json().catch(() => ({}));
+  const planSlug = (body.plan_slug || "").toString().trim().toLowerCase();
+  if (!["basic", "premium"].includes(planSlug)) {
+    return c.json({ success: false, error: { code: 400, message: "A valid plan_slug (basic or premium) is required." } }, 400);
+  }
+  const next = safeNext(body.next);
+
+  const sql = getDb(c.env);
+  try {
+    const plans = await sql`SELECT id, name, slug, price_paise, currency, duration_days, application_limit, entitlements FROM candidate_subscription_plans WHERE slug = ${planSlug} AND is_active = true LIMIT 1`;
+    if (plans.length === 0) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 404, message: "The selected candidate plan is unavailable." } }, 404);
+    }
+    const plan = plans[0];
+
+    const recent = await sql`SELECT count(*)::int as count FROM candidate_subscription_orders WHERE user_id = ${auth.id} AND created_at >= NOW() - INTERVAL '15 minutes'`;
+    if (recent[0].count >= 5) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 429, message: "Too many checkout attempts. Try again in 15 minutes." } }, 429);
+    }
+
+    const email = auth.email.toLowerCase();
+    const placeholderHash = await hashOTP(crypto.randomUUID());
+
+    const inserted = await sql`
+      INSERT INTO candidate_subscription_orders
+        (user_id, plan_id, email, next_path, amount_paise, currency, duration_days, application_limit, entitlements,
+         otp_hash, otp_expires_at, otp_verified_at, status)
+      VALUES (${auth.id}, ${plan.id}, ${email}, ${next}, ${plan.price_paise}, ${plan.currency}, ${plan.duration_days}, ${plan.application_limit}, ${plan.entitlements}::jsonb,
+        ${placeholderHash}, NOW(), NOW(), 'payment_pending')
+      RETURNING id, email, next_path, amount_paise, currency
+    `;
+    const order = inserted[0];
+
+    let providerOrderId: string;
+    try {
+      providerOrderId = await razorpay.createOrder(c.env, plan.price_paise, plan.currency, order.id, {
+        plan: plan.slug,
+        user_id: auth.id,
+      });
+    } catch (payErr: any) {
+      await sql.end();
+      if (payErr.message === razorpay.PAYMENT_UNAVAILABLE) {
+        return c.json({ success: false, error: { code: 503, message: "Payment checkout is not configured yet." } }, 503);
+      }
+      return c.json({ success: false, error: { code: 502, message: "The payment order could not be created. Please retry." } }, 502);
+    }
+
+    await sql`UPDATE candidate_subscription_orders SET provider_order_id = ${providerOrderId} WHERE id = ${order.id}`;
+    await sql.end();
+
+    return c.json({
+      success: true,
+      message: "Checkout ready.",
+      data: {
+        checkout_id: order.id,
+        razorpay_order_id: providerOrderId,
+        razorpay_key_id: razorpay.keyId(c.env),
+        amount_paise: order.amount_paise,
+        currency: order.currency,
+        plan_slug: plan.slug,
+        plan_name: plan.name,
+        email: order.email,
+        next: order.next_path,
+      },
+    });
+  } catch (err: any) {
+    await sql.end().catch(() => {});
+    return c.json({ success: false, error: { code: 500, message: "Failed to start checkout", details: err.message } }, 500);
+  }
+});
+
 subscriptionsRouter.post("/otp/verify", authenticate(), async (c) => {
   const gate = requireCandidate(c);
   if (!gate.ok) return gate.res;

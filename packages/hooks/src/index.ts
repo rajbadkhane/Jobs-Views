@@ -183,6 +183,7 @@ export function useSubscriptionActions() {
   return {
     startOtp: useMutation({ mutationFn: subscriptionApi.startOtp }),
     verifyOtp: useMutation({ mutationFn: subscriptionApi.verifyOtp }),
+    startCheckout: useMutation({ mutationFn: subscriptionApi.startCheckout }),
     verifyPayment: useMutation({ mutationFn: subscriptionApi.verifyPayment, onSuccess: async () => { await client.invalidateQueries({ queryKey: queryKeys.candidateSubscription }); } }),
     support: useMutation({ mutationFn: subscriptionApi.support })
   };

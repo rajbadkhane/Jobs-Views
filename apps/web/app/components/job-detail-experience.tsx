@@ -66,17 +66,19 @@ export function JobDetailExperience({ slug, initialJob }: { slug: string; initia
   const isCandidate = session.data?.role === "JOB_SEEKER";
   const subscription = useCandidateSubscription(isCandidate);
   const actions = useCandidateActions();
-  const savedJobsQuery = useCandidateData({
+  const candidateData = useCandidateData({
     savedJobs: true,
+    applications: isCandidate,
     profile: false,
     completion: false,
     skills: false,
     education: false,
     experience: false,
-    applications: false,
     notifications: false,
     notificationSummary: false
-  }).savedJobs;
+  });
+  const savedJobsQuery = candidateData.savedJobs;
+  const applicationsQuery = candidateData.applications;
   useEffect(() => {
     if (query.data) rememberRecentJob(query.data);
   }, [query.data]);
@@ -91,8 +93,10 @@ export function JobDetailExperience({ slug, initialJob }: { slug: string; initia
   const subscribed = subscription.data?.active === true;
   const saved = isCandidate ? savedJobIds(savedJobsQuery.data).includes(job.id) : false;
   const savingJob = actions.saveJob.isPending || actions.removeSavedJob.isPending;
+  const alreadyApplied = isCandidate ? appliedJobIds(applicationsQuery?.data).includes(job.id) : false;
 
   function apply() {
+    if (alreadyApplied) return;
     if (!session.data) {
       openLoginForPlans(job.slug);
       return;
@@ -129,7 +133,7 @@ export function JobDetailExperience({ slug, initialJob }: { slug: string; initia
 
   return (
     <main id="main-content" tabIndex={-1} data-job-slug={job.slug} className="min-h-screen bg-[var(--cos-surface)] pb-32 text-[var(--cos-on-surface)] lg:pb-0">
-      <Hero job={job} saved={saved} savingJob={savingJob} onToggleSave={toggleSave} onShare={share} subscribed={subscribed} applying={actions.apply.isPending} onApply={apply} />
+      <Hero job={job} saved={saved} savingJob={savingJob} onToggleSave={toggleSave} onShare={share} subscribed={subscribed} applying={actions.apply.isPending} applied={alreadyApplied} onApply={apply} />
       <section className={cn(containerClass, "grid gap-6 py-6 lg:grid-cols-[minmax(0,1fr)_360px]") }>
         <div className="grid min-w-0 gap-6">
           <JobOverview job={job} />
@@ -139,9 +143,9 @@ export function JobDetailExperience({ slug, initialJob }: { slug: string; initia
           <SubscriberDetails job={job} />
           {!subscribed ? <SubscribeGate slug={job.slug} /> : null}
         </div>
-        <StickyActionCard job={job} saved={saved} savingJob={savingJob} onToggleSave={toggleSave} onShare={share} subscribed={subscribed} applying={actions.apply.isPending} onApply={apply} />
+        <StickyActionCard job={job} saved={saved} savingJob={savingJob} onToggleSave={toggleSave} onShare={share} subscribed={subscribed} applying={actions.apply.isPending} applied={alreadyApplied} onApply={apply} />
       </section>
-      <MobileApplyBar job={job} saved={saved} savingJob={savingJob} onToggleSave={toggleSave} onShare={share} subscribed={subscribed} applying={actions.apply.isPending} onApply={apply} />
+      <MobileApplyBar job={job} saved={saved} savingJob={savingJob} onToggleSave={toggleSave} onShare={share} subscribed={subscribed} applying={actions.apply.isPending} applied={alreadyApplied} onApply={apply} />
     </main>
   );
 }
@@ -151,7 +155,12 @@ function savedJobIds(data: unknown): string[] {
   return list.map((item) => (item as { job_id?: string })?.job_id).filter((id): id is string => Boolean(id));
 }
 
-function Hero({ job, saved, savingJob, onToggleSave, onShare, subscribed, applying, onApply }: { job: PublicJob; saved: boolean; savingJob: boolean; onToggleSave: () => void; onShare: () => void; subscribed: boolean; applying: boolean; onApply: () => void }) {
+function appliedJobIds(data: unknown): string[] {
+  const list = Array.isArray(data) ? data : data && typeof data === "object" && Array.isArray((data as { items?: unknown }).items) ? (data as { items: unknown[] }).items : [];
+  return list.map((item) => (item as { job_id?: string })?.job_id).filter((id): id is string => Boolean(id));
+}
+
+function Hero({ job, saved, savingJob, onToggleSave, onShare, subscribed, applying, applied, onApply }: { job: PublicJob; saved: boolean; savingJob: boolean; onToggleSave: () => void; onShare: () => void; subscribed: boolean; applying: boolean; applied: boolean; onApply: () => void }) {
   const description = job.short_description?.trim() || job.full_description?.trim();
   const badges = [
     job.status ? titleCase(job.status) : "",
@@ -186,7 +195,7 @@ function Hero({ job, saved, savingJob, onToggleSave, onShare, subscribed, applyi
             <Fact icon={Clock} label="Type" value={job.job_type ? titleCase(job.job_type) : "Not specified"} />
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button size="lg" onClick={onApply} loading={applying} disabled={applying}><Zap size={17} /> {subscribed ? "Apply now" : "Unlock application"}</Button>
+            <Button size="lg" onClick={onApply} loading={applying} disabled={applying || applied}>{applied ? <CheckCircle2 size={17} /> : <Zap size={17} />} {applied ? "Applied" : subscribed ? "Apply now" : "Unlock application"}</Button>
             <a href="#job-details"><Button variant="secondary" size="lg">See full details</Button></a>
             <Button variant="outline" size="lg" onClick={onToggleSave} disabled={savingJob} aria-pressed={saved}><Bookmark size={17} className={saved ? "fill-amber-400 text-amber-400" : undefined} /> {saved ? "Saved" : "Save"}</Button>
             <Button variant="outline" size="lg" onClick={onShare}><Share2 size={17} /> Share</Button>
@@ -207,7 +216,7 @@ function Hero({ job, saved, savingJob, onToggleSave, onShare, subscribed, applyi
   );
 }
 
-function StickyActionCard({ job, saved, savingJob, onToggleSave, onShare, subscribed, applying, onApply }: { job: PublicJob; saved: boolean; savingJob: boolean; onToggleSave: () => void; onShare: () => void; subscribed: boolean; applying: boolean; onApply: () => void }) {
+function StickyActionCard({ job, saved, savingJob, onToggleSave, onShare, subscribed, applying, applied, onApply }: { job: PublicJob; saved: boolean; savingJob: boolean; onToggleSave: () => void; onShare: () => void; subscribed: boolean; applying: boolean; applied: boolean; onApply: () => void }) {
   return (
     <aside className="hidden lg:block">
       <Card className="sticky top-20 grid gap-4">
@@ -216,7 +225,7 @@ function StickyActionCard({ job, saved, savingJob, onToggleSave, onShare, subscr
           <h2 className="mt-3 text-xl font-bold">{job.title}</h2>
           <p className="text-sm text-[var(--cos-on-surface-variant)]">{job.company_name}</p>
         </div>
-        <Button size="lg" fullWidth onClick={onApply} loading={applying} disabled={applying}><Zap size={17} /> {subscribed ? "Apply now" : "Unlock application"}</Button>
+        <Button size="lg" fullWidth onClick={onApply} loading={applying} disabled={applying || applied}>{applied ? <CheckCircle2 size={17} /> : <Zap size={17} />} {applied ? "Applied" : subscribed ? "Apply now" : "Unlock application"}</Button>
         {!subscribed ? <Button variant="secondary" fullWidth onClick={() => openPlans(job.slug)}>View plans</Button> : null}
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={onToggleSave} disabled={savingJob} aria-pressed={saved}><Bookmark size={16} className={saved ? "fill-amber-400 text-amber-400" : undefined} /> {saved ? "Saved" : "Save"}</Button>
@@ -353,14 +362,14 @@ function SubscriberDetails({ job }: { job: PublicJob }) {
   );
 }
 
-function MobileApplyBar({ job, saved, savingJob, onToggleSave, onShare, subscribed, applying, onApply }: { job: PublicJob; saved: boolean; savingJob: boolean; onToggleSave: () => void; onShare: () => void; subscribed: boolean; applying: boolean; onApply: () => void }) {
+function MobileApplyBar({ job, saved, savingJob, onToggleSave, onShare, subscribed, applying, applied, onApply }: { job: PublicJob; saved: boolean; savingJob: boolean; onToggleSave: () => void; onShare: () => void; subscribed: boolean; applying: boolean; applied: boolean; onApply: () => void }) {
   return (
     <div className="fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 grid grid-cols-[1fr_auto_auto] gap-2 rounded-[var(--radius-career-card)] border border-[var(--cos-outline-variant)] bg-[color-mix(in_srgb,var(--cos-surface-container-lowest)_94%,transparent)] p-2 shadow-career-floating backdrop-blur-xl sm:inset-x-3 lg:hidden">
       <div className="col-span-3 grid grid-cols-[auto_1fr] items-center gap-2 rounded-[var(--radius-career-button)] bg-[var(--cos-surface-container-low)] px-3 py-2">
         <span className="text-xs font-semibold text-[var(--cos-on-surface-variant)]">Salary</span>
         <span className="truncate text-right text-sm font-bold text-[var(--cos-on-surface)]">{salary(job)}</span>
       </div>
-      <Button onClick={onApply} loading={applying} disabled={applying}>{subscribed ? "Apply" : "Unlock"}</Button>
+      <Button onClick={onApply} loading={applying} disabled={applying || applied}>{applied ? "Applied" : subscribed ? "Apply" : "Unlock"}</Button>
       <Button variant="outline" size="icon" aria-label={saved ? "Remove from saved jobs" : "Save job"} aria-pressed={saved} disabled={savingJob} onClick={onToggleSave}><Bookmark size={16} className={saved ? "fill-amber-400 text-amber-400" : undefined} /></Button>
       <Button variant="outline" size="icon" aria-label="Share job" onClick={onShare}><Share2 size={16} /></Button>
     </div>

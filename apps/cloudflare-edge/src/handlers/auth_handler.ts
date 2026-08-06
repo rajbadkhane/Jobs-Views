@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { getDb, Env } from "../db";
+import { sendMail, resetPasswordEmailHTML } from "../lib/mail";
 
 export const authRouter = new Hono<{ Bindings: Env }>();
 
@@ -98,9 +99,9 @@ authRouter.post("/register", async (c) => {
           RETURNING id
         `;
         await tx`
-          INSERT INTO employer_profiles (user_id, company_id, display_name, designation)
-          VALUES (${userId}, ${newCo[0].id}, ${body.first_name || "Talent Acquirer"}, 'Recruitment Director')
-        `.catch(() => {});
+          INSERT INTO employer_profiles (user_id, company_id, first_name, last_name, title)
+          VALUES (${userId}, ${newCo[0].id}, ${body.first_name || "Talent"}, ${body.last_name || "Acquirer"}, ${body.designation || "Recruitment Director"})
+        `;
       }
     });
 
@@ -271,24 +272,79 @@ authRouter.post("/refresh", async (c) => {
   }
 });
 
+function allowedResetOrigin(c: any): string {
+  const origin = (c.req.header("origin") || "").trim();
+  const allowed = (c.env.CORS_ALLOW_ORIGINS || "")
+    .split(",")
+    .map((value: string) => value.trim())
+    .filter(Boolean);
+  if (origin && allowed.includes(origin)) return origin;
+  return "https://jobsviews.com";
+}
+
 authRouter.post("/forgot-password", async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  return c.json({
-    success: true,
-    message: `Password recovery token generated for ${body.email || "account"}.`,
-    data: { reset_token: "edge-recovery-" + Math.floor(100000 + Math.random() * 900000) },
-  });
+  const email = (body.email || "").toString().trim().toLowerCase();
+  if (!email) {
+    return c.json({ success: false, error: { code: 400, message: "Email is required." } }, 400);
+  }
+
+  const sql = getDb(c.env);
+  try {
+    const users = await sql`SELECT id, email FROM users WHERE email = ${email} AND deleted_at IS NULL LIMIT 1`;
+    if (users.length > 0) {
+      const user = users[0];
+      const rawToken = crypto.randomUUID() + crypto.randomUUID();
+      const tokenHash = await hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      await sql`INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (${user.id}, ${tokenHash}, ${expiresAt})`;
+      const resetUrl = `${allowedResetOrigin(c)}/reset-password?token=${rawToken}`;
+      await sendMail(c.env, user.email, "Reset your Jobs View password", resetPasswordEmailHTML(resetUrl)).catch((err) => {
+        console.error("[Edge Auth] Password reset email failed:", err.message);
+      });
+    }
+    await sql.end();
+    // Always return the same generic message regardless of whether the email exists, so this
+    // endpoint can't be used to enumerate registered accounts.
+    return c.json({ success: true, message: "If an account exists for that email, a password reset link has been sent.", data: null });
+  } catch (err: any) {
+    await sql.end().catch(() => {});
+    return c.json({ success: false, error: { code: 500, message: "Password recovery request failed", details: err.message } }, 500);
+  }
 });
 
 authRouter.post("/reset-password", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const token = (body.token || "").toString().trim();
+  const password = (body.password || "").toString();
+  if (!token || !password) {
+    return c.json({ success: false, error: { code: 400, message: "Reset token and new password are required." } }, 400);
+  }
+  if (password.length < 8) {
+    return c.json({ success: false, error: { code: 400, message: "Password must be at least 8 characters." } }, 400);
+  }
+
+  const sql = getDb(c.env);
   try {
-    const body = await c.req.json().catch(() => ({}));
-    if (!body.password) {
-      return c.json({ success: false, error: { code: 400, message: "New password required." } }, 400);
+    const tokenHash = await hashToken(token);
+    const records = await sql`SELECT id, user_id FROM password_resets WHERE token_hash = ${tokenHash} AND used_at IS NULL AND expires_at > NOW() LIMIT 1`;
+    if (records.length === 0) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 401, message: "This reset link is invalid or has expired. Please request a new one." } }, 401);
     }
-    return c.json({ success: true, message: "Password reset completed successfully.", data: null });
+    const record = records[0];
+    const passwordHash = await bcrypt.hash(password, 10);
+    await sql.begin(async (tx: any) => {
+      await tx`UPDATE users SET password_hash = ${passwordHash} WHERE id = ${record.user_id}`;
+      await tx`UPDATE password_resets SET used_at = NOW() WHERE id = ${record.id}`;
+      // Revoke every active session so a stolen/old session can't outlive the password change.
+      await tx`UPDATE user_sessions SET revoked_at = NOW() WHERE user_id = ${record.user_id} AND revoked_at IS NULL`;
+    });
+    await sql.end();
+    return c.json({ success: true, message: "Password reset successfully. Please log in with your new password.", data: null });
   } catch (err: any) {
-    return c.json({ success: false, error: { code: 500, message: "Password reset failure." } }, 500);
+    await sql.end().catch(() => {});
+    return c.json({ success: false, error: { code: 500, message: "Password reset failed", details: err.message } }, 500);
   }
 });
 

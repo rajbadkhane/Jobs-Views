@@ -282,7 +282,7 @@ export const salaryApi = {
 
 export const companyApi = {
   search: (query?: QueryParams) => request<{ items: PublicCompany[] } | PublicCompany[]>(api, { method: "GET", url: "/companies", params: params(query) }),
-  publicBySlug: (slug: string) => request<PublicCompany>(api, { method: "GET", url: `/companies/${encodeURIComponent(slug)}` }),
+  publicBySlug: (slug: string) => request<PublicCompany>(api, { method: "GET", url: `/companies/slug/${encodeURIComponent(slug)}` }),
   register: (payload: Record<string, unknown>) => request<unknown>(api, { method: "POST", url: "/companies", data: payload }),
   mine: () => request<unknown[]>(api, { method: "GET", url: "/companies/me" }),
   update: (id: string, payload: Record<string, unknown>) => request<unknown>(api, { method: "PATCH", url: `/companies/${id}`, data: payload }),
@@ -307,7 +307,7 @@ export const companyApi = {
 export const jobsApi = {
   search: (query?: QueryParams) => request<unknown[]>(api, { method: "GET", url: "/jobs", params: params(query) }),
   taxonomies: () => request<unknown>(api, { method: "GET", url: "/jobs/taxonomies" }),
-  publicBySlug: (slug: string) => request<PublicJob>(api, { method: "GET", url: `/jobs/${encodeURIComponent(slug)}` }),
+  publicBySlug: (slug: string) => request<PublicJob>(api, { method: "GET", url: `/jobs/slug/${encodeURIComponent(slug)}` }),
   seo: (slug: string) => request<unknown>(api, { method: "GET", url: `/jobs/${slug}/seo` }),
   structuredData: (slug: string) => request<unknown>(api, { method: "GET", url: `/jobs/${slug}/structured-data` }),
   create: (payload: Record<string, unknown>) => request<unknown>(api, { method: "POST", url: "/jobs", data: payload }),

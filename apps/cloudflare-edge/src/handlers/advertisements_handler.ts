@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { getDb } from "../db";
+import { getDb, Env } from "../db";
 import { authenticate, getCurrentUser, AppEnv } from "../middleware";
 
 export const advertisementsRouter = new Hono<AppEnv>();
@@ -7,8 +7,28 @@ export const publicAdvertisementsRouter = new Hono<AppEnv>();
 
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
+const STORAGE_BUCKET = "advertisements";
 
 advertisementsRouter.use("/*", authenticate());
+
+let bucketEnsured = false;
+
+/**
+ * Lazily creates the public "advertisements" bucket in Supabase Storage the first time
+ * this Worker instance handles an upload. Cheap no-op once the bucket already exists.
+ */
+async function ensureBucket(env: Env) {
+  if (bucketEnsured) return;
+  const base = (env.SUPABASE_URL || "").replace(/\/$/, "");
+  const key = env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!base || !key) return;
+  await fetch(`${base}/storage/v1/bucket`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, apikey: key, "Content-Type": "application/json" },
+    body: JSON.stringify({ id: STORAGE_BUCKET, name: STORAGE_BUCKET, public: true, file_size_limit: MAX_IMAGE_BYTES }),
+  }).catch(() => {});
+  bucketEnsured = true;
+}
 
 /**
  * GET /api/v1/admin/advertisements
@@ -32,13 +52,15 @@ advertisementsRouter.get("/", async (c) => {
 
 /**
  * POST /api/v1/admin/advertisements
- * Uploads a banner image to R2 and creates the advertisement record. Expects multipart/form-data
- * with an `image` file field plus title/link_url/alt_text/placement/is_active/sort_order fields.
+ * Uploads a banner image to Supabase Storage and creates the advertisement record. Expects
+ * multipart/form-data with an `image` file field plus title/link_url/alt_text/placement/sort_order fields.
  */
 advertisementsRouter.post("/", async (c) => {
   const auth = getCurrentUser(c);
-  if (!c.env.ASSETS_BUCKET) {
-    return c.json({ success: false, error: { code: 503, message: "Image storage is not configured yet. Ask an engineer to enable R2 and wire the ASSETS_BUCKET binding." } }, 503);
+  const supabaseUrl = (c.env.SUPABASE_URL || "").replace(/\/$/, "");
+  const serviceKey = c.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!supabaseUrl || !serviceKey) {
+    return c.json({ success: false, error: { code: 503, message: "Image storage is not configured yet. Ask an engineer to set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY." } }, 503);
   }
 
   let form: FormData;
@@ -70,16 +92,28 @@ advertisementsRouter.post("/", async (c) => {
   }
 
   try {
-    const extension = file.type.split("/")[1] || "png";
-    const key = `advertisements/${crypto.randomUUID()}.${extension}`;
-    const bytes = await file.arrayBuffer();
-    await c.env.ASSETS_BUCKET.put(key, bytes, { httpMetadata: { contentType: file.type } });
+    await ensureBucket(c.env);
 
-    const base = (c.env.ASSETS_PUBLIC_BASE_URL || "").replace(/\/$/, "");
-    if (!base) {
-      return c.json({ success: false, error: { code: 503, message: "Image storage is missing a public base URL. Ask an engineer to set ASSETS_PUBLIC_BASE_URL." } }, 503);
+    const extension = file.type.split("/")[1] || "png";
+    const key = `${crypto.randomUUID()}.${extension}`;
+    const bytes = await file.arrayBuffer();
+
+    const uploadRes = await fetch(`${supabaseUrl}/storage/v1/object/${STORAGE_BUCKET}/${key}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+        "Content-Type": file.type,
+        "x-upsert": "true",
+      },
+      body: bytes,
+    });
+    if (!uploadRes.ok) {
+      const detail = await uploadRes.text().catch(() => "");
+      return c.json({ success: false, error: { code: 502, message: "Failed to upload image to storage.", details: detail } }, 502);
     }
-    const imageUrl = `${base}/${key}`;
+
+    const imageUrl = `${supabaseUrl}/storage/v1/object/public/${STORAGE_BUCKET}/${key}`;
 
     const sql = getDb(c.env);
     const inserted = await sql`
@@ -128,7 +162,7 @@ advertisementsRouter.patch("/:id", async (c) => {
 
 /**
  * DELETE /api/v1/admin/advertisements/:id
- * Removes the DB record and the underlying R2 object.
+ * Removes the DB record and the underlying Supabase Storage object.
  */
 advertisementsRouter.delete("/:id", async (c) => {
   const id = c.req.param("id");
@@ -139,13 +173,16 @@ advertisementsRouter.delete("/:id", async (c) => {
     if (rows.length === 0) {
       return c.json({ success: false, error: { code: 404, message: "Advertisement not found." } }, 404);
     }
-    if (c.env.ASSETS_BUCKET) {
-      const base = (c.env.ASSETS_PUBLIC_BASE_URL || "").replace(/\/$/, "");
-      const imageUrl: string = rows[0].image_url || "";
-      if (base && imageUrl.startsWith(base)) {
-        const key = imageUrl.slice(base.length + 1);
-        await c.env.ASSETS_BUCKET.delete(key).catch(() => {});
-      }
+    const supabaseUrl = (c.env.SUPABASE_URL || "").replace(/\/$/, "");
+    const serviceKey = c.env.SUPABASE_SERVICE_ROLE_KEY || "";
+    const imageUrl: string = rows[0].image_url || "";
+    const marker = `/storage/v1/object/public/${STORAGE_BUCKET}/`;
+    if (supabaseUrl && serviceKey && imageUrl.includes(marker)) {
+      const key = imageUrl.slice(imageUrl.indexOf(marker) + marker.length);
+      await fetch(`${supabaseUrl}/storage/v1/object/${STORAGE_BUCKET}/${key}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey },
+      }).catch(() => {});
     }
     return c.json({ success: true, message: "Advertisement removed." });
   } catch (err: any) {

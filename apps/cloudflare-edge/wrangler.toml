@@ -27,6 +27,7 @@ JWT_REFRESH_SECRET = "jv_prod_jwt_refresh_9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a
 MAIL_PROVIDER = "resend"
 MAIL_FROM = "Jobs View <support@jobsviews.com>"
 RAZORPAY_API_BASE_URL = "https://api.razorpay.com/v1"
+SUPABASE_URL = "https://dnqomorishchdrfjfvlt.supabase.co"
 RATE_LIMIT_MAX = "300"
 SERVER_HOST = "0.0.0.0"
 STORAGE_PROVIDER = "cloudflare_r2"

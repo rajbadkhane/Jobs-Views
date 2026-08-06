@@ -22,8 +22,8 @@ export interface Env {
   RAZORPAY_API_BASE_URL?: string;
   RESEND_API_KEY?: string;
   MAIL_FROM?: string;
-  ASSETS_BUCKET?: R2Bucket;
-  ASSETS_PUBLIC_BASE_URL?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
 }
 
 /**

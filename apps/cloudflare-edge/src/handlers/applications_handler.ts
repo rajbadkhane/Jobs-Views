@@ -10,7 +10,8 @@ savedJobsRouter.use("/*", authenticate());
 
 /**
  * POST /api/v1/applications
- * Candidate applies to an active job opening.
+ * Candidate applies to an active job opening. Requires an active, non-expired candidate
+ * subscription with remaining application quota — enforced here, not just in the UI.
  */
 applicationsRouter.post("/", async (c) => {
   const auth = getCurrentUser(c);
@@ -22,16 +23,44 @@ applicationsRouter.post("/", async (c) => {
 
   try {
     const sql = getDb(c.env);
-    let candidateId = auth.id;
-    let resumeUrl = body.resume_url || "https://jobsviews.com/assets/default-resume.pdf";
 
+    const jobs = await sql`SELECT id, company_id FROM jobs WHERE id = ${jobId} AND deleted_at IS NULL LIMIT 1`;
+    if (jobs.length === 0) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 404, message: "This job is no longer available." } }, 404);
+    }
+
+    const subs = await sql`
+      SELECT s.id, s.application_limit,
+        (SELECT count(*) FROM applications a WHERE a.candidate_user_id = s.user_id AND a.deleted_at IS NULL AND a.created_at >= s.starts_at AND a.created_at < s.ends_at) as applications_used
+      FROM candidate_subscriptions s
+      WHERE s.user_id = ${auth.id} AND s.status = 'active' AND s.ends_at > NOW()
+      ORDER BY s.created_at DESC LIMIT 1
+    `;
+    if (subs.length === 0) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 402, message: "An active plan is required to apply. Choose a plan to continue." } }, 402);
+    }
+    const sub = subs[0];
+    if (sub.application_limit != null && Number(sub.applications_used) >= Number(sub.application_limit)) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 403, message: "You've reached your plan's application limit for this cycle." } }, 403);
+    }
+
+    const existing = await sql`SELECT id FROM applications WHERE job_id = ${jobId} AND candidate_user_id = ${auth.id} AND deleted_at IS NULL LIMIT 1`;
+    if (existing.length > 0) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 409, message: "You already applied to this job." } }, 409);
+    }
+
+    const resumeSnapshot: any = { resume_url: body.resume_url || "https://jobsviews.com/assets/default-resume.pdf" };
     const inserted = await sql`
-      INSERT INTO job_applications (job_id, user_id, status, cover_letter, resume_url, created_at)
-      VALUES (${jobId}, ${candidateId}, 'applied', ${body.cover_letter || ""}, ${resumeUrl}, NOW())
+      INSERT INTO applications (job_id, company_id, candidate_user_id, status, cover_letter, resume_snapshot, source)
+      VALUES (${jobId}, ${jobs[0].company_id}, ${auth.id}, 'applied', ${body.cover_letter || ""}, ${resumeSnapshot}::jsonb, ${body.source || "career_os"})
       RETURNING *
-    `.catch(() => [{ id: "app_" + Date.now(), job_id: jobId, user_id: candidateId, status: "applied", cover_letter: body.cover_letter || "", resume_url: resumeUrl, created_at: new Date().toISOString() }]);
+    `;
     await sql.end();
-    return c.json({ success: true, message: "Application submitted successfully via Cloudflare Edge!", data: inserted[0] });
+    return c.json({ success: true, message: "Application submitted successfully!", data: inserted[0] });
   } catch (err: any) {
     return c.json({ success: false, error: { code: 500, message: "Application submission failed", details: err.message } }, 500);
   }
@@ -44,10 +73,10 @@ applicationsRouter.get("/me", async (c) => {
     const sql = getDb(c.env);
     const items = await sql`
       SELECT a.*, j.title as job_title, j.slug as job_slug, j.city, j.state, j.work_mode, c.name as company_name, c.logo_url as company_logo_url
-      FROM job_applications a
+      FROM applications a
       JOIN jobs j ON j.id = a.job_id
       JOIN companies c ON c.id = j.company_id
-      WHERE a.user_id = ${auth.id} ${statusFilter ? sql`AND a.status = ${statusFilter}` : sql``}
+      WHERE a.candidate_user_id = ${auth.id} AND a.deleted_at IS NULL ${statusFilter ? sql`AND a.status = ${statusFilter}` : sql``}
       ORDER BY a.created_at DESC LIMIT 50
     `.catch(() => []);
     await sql.end();
@@ -63,12 +92,12 @@ applicationsRouter.get("/inbox/:companyId", async (c) => {
   try {
     const sql = getDb(c.env);
     const items = await sql`
-      SELECT a.*, j.title as job_title, cp.first_name, cp.last_name, cp.mobile, u.email as candidate_email, a.resume_url, a.cover_letter
-      FROM job_applications a
+      SELECT a.*, j.title as job_title, cp.first_name, cp.last_name, cp.mobile, u.email as candidate_email, a.resume_snapshot, a.cover_letter
+      FROM applications a
       JOIN jobs j ON j.id = a.job_id
-      LEFT JOIN candidate_profiles cp ON cp.user_id = a.user_id
-      LEFT JOIN users u ON u.id = a.user_id
-      WHERE j.company_id = ${companyId} AND j.deleted_at IS NULL ${statusFilter ? sql`AND a.status = ${statusFilter}` : sql``}
+      LEFT JOIN candidate_profiles cp ON cp.user_id = a.candidate_user_id
+      LEFT JOIN users u ON u.id = a.candidate_user_id
+      WHERE j.company_id = ${companyId} AND j.deleted_at IS NULL AND a.deleted_at IS NULL ${statusFilter ? sql`AND a.status = ${statusFilter}` : sql``}
       ORDER BY a.created_at DESC LIMIT 50
     `.catch(() => []);
     await sql.end();
@@ -131,29 +160,30 @@ applicationsRouter.get("/", async (c) => {
     if (auth.role === "JOB_SEEKER") {
       items = await sql`
         SELECT a.*, j.title as job_title, j.slug as job_slug, j.city, j.state, j.work_mode, c.name as company_name, c.logo_url as company_logo_url
-        FROM job_applications a
+        FROM applications a
         JOIN jobs j ON j.id = a.job_id
         JOIN companies c ON c.id = j.company_id
-        WHERE a.user_id = ${auth.id} ${statusFilter ? sql`AND a.status = ${statusFilter}` : sql``}
+        WHERE a.candidate_user_id = ${auth.id} AND a.deleted_at IS NULL ${statusFilter ? sql`AND a.status = ${statusFilter}` : sql``}
         ORDER BY a.created_at DESC LIMIT 50
       `.catch(() => []);
     } else if (auth.role === "EMPLOYER") {
       items = await sql`
         SELECT a.*, j.title as job_title, cp.first_name, cp.last_name, cp.mobile, u.email as candidate_email
-        FROM job_applications a
+        FROM applications a
         JOIN jobs j ON j.id = a.job_id
         JOIN employer_profiles ep ON ep.company_id = j.company_id AND ep.user_id = ${auth.id}
-        LEFT JOIN candidate_profiles cp ON cp.user_id = a.user_id
-        LEFT JOIN users u ON u.id = a.user_id
-        WHERE j.deleted_at IS NULL ${statusFilter ? sql`AND a.status = ${statusFilter}` : sql``}
+        LEFT JOIN candidate_profiles cp ON cp.user_id = a.candidate_user_id
+        LEFT JOIN users u ON u.id = a.candidate_user_id
+        WHERE j.deleted_at IS NULL AND a.deleted_at IS NULL ${statusFilter ? sql`AND a.status = ${statusFilter}` : sql``}
         ORDER BY a.created_at DESC LIMIT 50
       `.catch(() => []);
     } else {
       items = await sql`
         SELECT a.*, j.title as job_title, u.email as candidate_email
-        FROM job_applications a
+        FROM applications a
         JOIN jobs j ON j.id = a.job_id
-        LEFT JOIN users u ON u.id = a.user_id
+        LEFT JOIN users u ON u.id = a.candidate_user_id
+        WHERE a.deleted_at IS NULL
         ORDER BY a.created_at DESC LIMIT 100
       `.catch(() => []);
     }
@@ -209,7 +239,7 @@ applicationsRouter.patch("/:id/status", async (c) => {
   const status = body.status || "reviewing";
   try {
     const sql = getDb(c.env);
-    await sql`UPDATE job_applications SET status = ${status}, updated_at = NOW() WHERE id = ${id}`.catch(() => {});
+    await sql`UPDATE applications SET status = ${status}, last_activity_at = NOW(), updated_at = NOW() WHERE id = ${id}`;
     await sql.end();
     return c.json({ success: true, message: `Application stage updated to: ${status}`, data: { id, status } });
   } catch (err: any) {
@@ -221,7 +251,7 @@ applicationsRouter.get("/:id", async (c) => {
   const id = c.req.param("id");
   try {
     const sql = getDb(c.env);
-    const rows = await sql`SELECT * FROM job_applications WHERE id = ${id} LIMIT 1`.catch(() => []);
+    const rows = await sql`SELECT * FROM applications WHERE id = ${id} AND deleted_at IS NULL LIMIT 1`;
     await sql.end();
     if (rows.length === 0) return c.json({ success: false, error: { code: 404, message: "Application record not found." } }, 404);
     return c.json({ success: true, data: rows[0] });
@@ -236,7 +266,7 @@ applicationsRouter.patch("/:id", async (c) => {
   const status = body.status || "reviewing";
   try {
     const sql = getDb(c.env);
-    await sql`UPDATE job_applications SET status = ${status}, updated_at = NOW() WHERE id = ${id}`.catch(() => {});
+    await sql`UPDATE applications SET status = ${status}, last_activity_at = NOW(), updated_at = NOW() WHERE id = ${id}`;
     await sql.end();
     return c.json({ success: true, message: `Application stage updated to: ${status}`, data: { id, status } });
   } catch (err: any) {
@@ -245,11 +275,17 @@ applicationsRouter.patch("/:id", async (c) => {
 });
 
 applicationsRouter.delete("/:id", async (c) => {
+  const auth = getCurrentUser(c);
   const id = c.req.param("id");
-  const sql = getDb(c.env);
-  await sql`DELETE FROM job_applications WHERE id = ${id}`.catch(() => {});
-  await sql.end();
-  return c.json({ success: true, message: "Application withdrawn successfully." });
+  try {
+    const sql = getDb(c.env);
+    const rows = await sql`UPDATE applications SET status = 'withdrawn', deleted_at = NOW(), updated_at = NOW() WHERE id = ${id} AND candidate_user_id = ${auth.id} AND deleted_at IS NULL RETURNING id`;
+    await sql.end();
+    if (rows.length === 0) return c.json({ success: false, error: { code: 404, message: "Application record not found." } }, 404);
+    return c.json({ success: true, message: "Application withdrawn successfully." });
+  } catch (err: any) {
+    return c.json({ success: false, error: { code: 500, message: "Failed to withdraw application" } }, 500);
+  }
 });
 
 // Saved Jobs feature routes

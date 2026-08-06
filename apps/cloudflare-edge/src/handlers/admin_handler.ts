@@ -17,7 +17,7 @@ adminRouter.get("/dashboard", async (c) => {
       sql`SELECT COUNT(*) as c FROM users WHERE deleted_at IS NULL`.then((r: any) => Number(r[0].c)),
       sql`SELECT COUNT(*) as c FROM jobs WHERE status = 'published' AND deleted_at IS NULL`.then((r: any) => Number(r[0].c)),
       sql`SELECT COUNT(*) as c FROM companies WHERE deleted_at IS NULL`.then((r: any) => Number(r[0].c)),
-      sql`SELECT COUNT(*) as c FROM job_applications`.then((r: any) => Number(r[0].c)).catch(() => 45),
+      sql`SELECT COUNT(*) as c FROM applications WHERE deleted_at IS NULL`.then((r: any) => Number(r[0].c)),
     ]);
     await sql.end();
 
@@ -137,10 +137,11 @@ adminRouter.get("/applications", async (c) => {
     const sql = getDb(c.env);
     const items = await sql`
       SELECT a.*, j.title as job_title, j.slug as job_slug, u.email as candidate_email, c.name as company_name
-      FROM job_applications a
+      FROM applications a
       JOIN jobs j ON j.id = a.job_id
       JOIN companies c ON c.id = j.company_id
-      LEFT JOIN users u ON u.id = a.user_id
+      LEFT JOIN users u ON u.id = a.candidate_user_id
+      WHERE a.deleted_at IS NULL
       ORDER BY a.created_at DESC LIMIT 100
     `.catch(() => []);
     await sql.end();

@@ -258,24 +258,28 @@ function DashboardView({ real }: { real: RealData }) {
   return (
     <div className="grid gap-6">
       <CommandMetrics real={real} />
-      <div>
-        <div className="mb-3 flex items-center gap-2"><h2 className="text-lg font-bold">Sample intelligence widgets</h2><PreviewBadge /></div>
-        <p className="mb-4 text-sm text-[var(--cos-on-surface-variant)]">These widgets show what deeper AI-driven career analysis will look like once it&apos;s connected to real scoring. They are not calculated from your account yet.</p>
-        <ExclusiveWidgets />
-      </div>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_440px]">
-        <CareerHealthPanel />
-        <GoalsAndAchievements />
-      </div>
-      <div className="grid gap-6 xl:grid-cols-[440px_minmax(0,1fr)]">
-        <CareerTimelinePanel real={real} />
-        <RecommendationsPanel />
-      </div>
+      <CareerTimelinePanel real={real} />
       <div className="grid gap-4 md:grid-cols-3">
         <MiniModule title="Resume Intelligence" icon={<FileSearch size={18} />} href="/resume-insights" items={careerIntelligence.resumeInsights.missingSections} />
         <MiniModule title="Salary Intelligence" icon={<WalletCards size={18} />} href="/salary-insights" items={careerIntelligence.salary.drivers} />
         <MiniModule title="Skill Intelligence" icon={<Brain size={18} />} href="/skill-intelligence" items={careerIntelligence.skills.gaps} />
       </div>
+      <details className="group rounded-[var(--radius-career-card)] border border-dashed border-[var(--cos-outline-variant)]">
+        <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-sm font-semibold">
+          <span className="transition-transform group-open:rotate-90">›</span>
+          Preview: what deeper AI career analysis will look like
+          <PreviewBadge />
+        </summary>
+        <div className="grid gap-6 p-4 pt-0">
+          <p className="text-sm text-[var(--cos-on-surface-variant)]">These sections are sample content showing where Jobs View is headed. They are not calculated from your account.</p>
+          <ExclusiveWidgets />
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_440px]">
+            <CareerHealthPanel />
+            <GoalsAndAchievements />
+          </div>
+          <RecommendationsPanel />
+        </div>
+      </details>
     </div>
   );
 }

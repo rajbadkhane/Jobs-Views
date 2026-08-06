@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 
+import { navigation } from "@career-os/config";
 import {
   useCandidateActions,
   useCandidateData,
@@ -141,15 +142,6 @@ const titles: Record<CandidateView, string> = {
   public: "Public Profile"
 };
 
-const candidateNavigation = [
-  { label: "Overview", href: "/candidate" },
-  { label: "Applications", href: "/candidate/jobs/applied" },
-  { label: "Saved Jobs", href: "/candidate/jobs/saved" },
-  { label: "Recent Jobs", href: "/candidate/jobs/history" },
-  { label: "Notifications", href: "/candidate/notifications" },
-  { label: "Profile", href: "/candidate/profile" },
-  { label: "Settings", href: "/candidate/settings" }
-];
 
 const inputClass = "h-11 w-full rounded-[var(--radius-career-button)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] px-3 text-sm text-[var(--cos-on-surface)] outline-none transition focus:border-[var(--cos-primary)] focus:ring-2 focus:ring-[var(--cos-focus-ring)]";
 const linkClass = "inline-flex min-h-10 items-center justify-center gap-2 rounded-[var(--radius-career-button)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] px-3 text-sm font-semibold text-[var(--cos-on-surface)] transition hover:-translate-y-px hover:border-[var(--cos-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cos-focus-ring)]";
@@ -194,7 +186,7 @@ export function CandidatePlatform({ view }: { view: CandidateView }) {
     <AppShell
       variant="candidate"
       title={titles[view]}
-      nav={candidateNavigation}
+      nav={navigation.candidate}
       workspaceLabel="Candidate Workspace"
       workspaceName={displayName(candidate)}
       workspaceDescription={candidate.headline || candidate.title || "Career profile"}

@@ -44,7 +44,7 @@ export function PublicHome({ showAudienceChooser = false }: { showAudienceChoose
     }
     setChooserOpen(false);
   }, []);
-  return <><main id="main-content" tabIndex={-1} className="bg-[var(--cos-surface)] text-[var(--cos-on-surface)]"><Navbar /><Hero /><AdvertisementBanner /><AudiencePaths /><LatestJobs /><EntryRoles /><PopularEmployers /><CareerTools /><EmployerCTA /><Footer /></main>{chooserOpen ? <AudienceChooser onContinue={continueAsJobSeeker} /> : null}</>;
+  return <><main id="main-content" tabIndex={-1} className="bg-[var(--cos-surface)] text-[var(--cos-on-surface)]"><Navbar /><AdvertisementCarousel /><Hero /><AudiencePaths /><LatestJobs /><EntryRoles /><PopularEmployers /><CareerTools /><EmployerCTA /><Footer /></main>{chooserOpen ? <AudienceChooser onContinue={continueAsJobSeeker} /> : null}</>;
 }
 
 export function Navbar() {
@@ -99,15 +99,44 @@ export function Navbar() {
 
 function Hero(){const router=useRouter();const [q,setQ]=useState("");const [location,setLocation]=useState("");function submit(event:FormEvent){event.preventDefault();const params=new URLSearchParams();if(q.trim())params.set("q",q.trim());if(location.trim())params.set("location",location.trim());router.push(`/jobs${params.size?`?${params}`:""}`)}return <section className="relative overflow-hidden border-b border-[var(--cos-outline-variant)] bg-gradient-to-b from-slate-900/5 via-transparent to-transparent dark:from-blue-950/20"><div className="absolute top-0 left-1/4 -z-10 h-96 w-96 rounded-full bg-[#0a3a7a]/10 blur-3xl pointer-events-none"/><div className="absolute bottom-0 right-1/4 -z-10 h-96 w-96 rounded-full bg-[#f59e0b]/10 blur-3xl pointer-events-none"/><div className={cn(container,"grid min-h-[min(720px,calc(100svh-4rem))] items-center gap-10 py-14 lg:grid-cols-[1.1fr_.9fr]")}><Reveal><span className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-400 shadow-2xs"><Sparkles size={13} className="text-amber-500 fill-current"/> Verified Career Marketplace</span><h1 className="mt-5 max-w-3xl text-4xl font-black leading-tight sm:text-5xl lg:text-6xl text-slate-950 dark:text-white tracking-tight">Find work you can <span className="bg-gradient-to-r from-[#0a3a7a] via-indigo-600 to-[#f59e0b] dark:from-blue-400 dark:via-indigo-300 dark:to-amber-400 bg-clip-text text-transparent">trust.</span> <span className="block sm:inline text-[#f59e0b]">Build what comes next.</span></h1><p className="mt-5 max-w-2xl text-lg leading-8 text-[var(--cos-on-surface-variant)] font-medium">Search published opportunities for 10th and 12th pass candidates, ITI workers, freshers, graduates, and experienced professionals across India.</p><form onSubmit={submit} className="mt-7 grid gap-2 rounded-2xl border-2 border-[var(--cos-primary)]/20 bg-[var(--cos-surface-container-lowest)]/95 p-3.5 shadow-xl backdrop-blur-md sm:grid-cols-[1fr_1fr_auto] hover:border-[#0a3a7a]/40 dark:hover:border-amber-500/40 transition-all"><label className="grid gap-1"><span className="text-xs font-bold text-[#0a3a7a] dark:text-blue-400">Job or skill</span><input value={q} onChange={(event)=>setQ(event.target.value)} className="h-12 min-w-0 rounded-xl border border-[var(--cos-outline-variant)] bg-transparent px-3.5 font-semibold outline-none focus:border-[#0a3a7a] focus:ring-2 focus:ring-[#0a3a7a]/20" placeholder="Driver, accountant, React"/></label><label className="grid gap-1"><span className="text-xs font-bold text-[#0a3a7a] dark:text-blue-400">Location</span><input value={location} onChange={(event)=>setLocation(event.target.value)} className="h-12 min-w-0 rounded-xl border border-[var(--cos-outline-variant)] bg-transparent px-3.5 font-semibold outline-none focus:border-[#0a3a7a] focus:ring-2 focus:ring-[#0a3a7a]/20" placeholder="City or remote"/></label><Button variant="gradient" className="self-end sm:h-12 px-6 font-extrabold shadow-lg hover:scale-[1.02] transition-transform"><Search size={18}/> Search jobs</Button></form><div className="mt-5 flex flex-wrap gap-2">{["10th pass","12th pass","ITI","Fresher","Experienced","Nursing home care","Staff nurse","Doctors","Work from home","Remote"].map((item,idx)=><Link key={item} href={`/jobs?q=${encodeURIComponent(item)}`} className={cn("rounded-full border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] px-3.5 py-1.5 text-xs sm:text-sm font-bold shadow-2xs transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm", idx%2===0 ? "hover:border-[#0a3a7a] hover:text-[#0a3a7a] dark:hover:text-blue-400" : "hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400")}>{item}</Link>)}</div></Reveal><Reveal><div className="relative mx-auto aspect-[4/3] w-full max-w-xl overflow-hidden rounded-2xl border border-[var(--cos-outline-variant)] shadow-2xl"><Image src="/images/home-hero-india-careers.png" fill priority sizes="(max-width:1023px) 100vw, 45vw" className="object-cover transition duration-500 hover:scale-[1.02]" alt="Indian job seekers exploring career opportunities"/></div></Reveal></div></section>}
 
-function AdvertisementBanner(){
+function AdvertisementCarousel(){
   const query=useQuery({queryKey:["home","advertisements"],queryFn:()=>contentApi.advertisements("homepage_hero"),staleTime:5*60*1000});
   const items=asItems<Advertisement>(query.data);
+  const reduced=useReducedMotion();
+  const [index,setIndex]=useState(0);
+
+  useEffect(()=>{
+    if(items.length<2||reduced)return;
+    const timer=setInterval(()=>setIndex((current)=>(current-1+items.length)%items.length),3000);
+    return ()=>clearInterval(timer);
+  },[items.length,reduced]);
+
   if(!items.length)return null;
-  const ad=items[0];
-  const image=<ResilientImage src={ad.image_url} alt={ad.alt_text||ad.title} fallbackLabel={ad.title} wrapperClassName="aspect-[16/5] w-full sm:aspect-[24/5]" className="object-cover"/>;
-  return <section className={cn(container,"py-6 sm:py-8")}><div className="overflow-hidden rounded-2xl border border-[var(--cos-outline-variant)] shadow-career-sm">
-    {ad.link_url?<a href={ad.link_url} target={ad.link_url.startsWith("http")?"_blank":undefined} rel={ad.link_url.startsWith("http")?"noopener noreferrer":undefined} aria-label={ad.title} className="block transition hover:opacity-95">{image}</a>:image}
-  </div></section>;
+
+  const at=(offset:number)=>items[(index+offset+items.length*items.length)%items.length];
+  const showSide=items.length>1;
+
+  return <section className="border-b border-[var(--cos-outline-variant)] bg-gradient-to-b from-slate-900/5 via-transparent to-transparent py-8 dark:from-blue-950/10 sm:py-12">
+    <div className={cn(container,"flex items-center justify-center gap-3 sm:gap-5")}>
+      {showSide?<CarouselSlide key={`left-${at(-1).id}`} ad={at(-1)} tone="side"/>:null}
+      <CarouselSlide key={`center-${at(0).id}`} ad={at(0)} tone="center"/>
+      {showSide?<CarouselSlide key={`right-${at(1).id}`} ad={at(1)} tone="side"/>:null}
+    </div>
+  </section>;
+}
+
+function CarouselSlide({ad,tone}:{ad:Advertisement;tone:"center"|"side"}){
+  const isCenter=tone==="center";
+  const image=<motion.div
+    layout
+    initial={{opacity:0,scale:0.85}}
+    animate={{opacity:isCenter?1:0.45,scale:isCenter?1:0.82,filter:isCenter?"blur(0px)":"blur(3px)"}}
+    transition={{duration:0.6,ease:"easeOut"}}
+    className={cn("relative aspect-[3/4] w-[46vw] shrink-0 overflow-hidden rounded-2xl border shadow-career-lg sm:w-[220px] lg:w-[260px]",isCenter?"z-10 border-[var(--cos-primary)]/40":"border-[var(--cos-outline-variant)]")}
+  >
+    <ResilientImage src={ad.image_url} alt={ad.alt_text||ad.title} fallbackLabel={ad.title} wrapperClassName="h-full w-full" className="object-cover"/>
+  </motion.div>;
+  return ad.link_url?<a href={ad.link_url} target={ad.link_url.startsWith("http")?"_blank":undefined} rel={ad.link_url.startsWith("http")?"noopener noreferrer":undefined} aria-label={ad.title} className={cn(!isCenter&&"pointer-events-none")}>{image}</a>:image;
 }
 function AudiencePaths(){return <Section title="Choose the path that fits you"><div className="grid gap-6 md:grid-cols-2"><PathCard icon={<Search/>} title="I want a job" text="Browse jobs freely. Sign in only when you apply or use a member career tool." href="/jobs" action="Browse jobs"/><PathCard icon={<Building2/>} title="I want to hire" text="Post jobs, review candidates, and manage hiring from the employer workspace." href={publicRoutes.employer.href} action="Open employer portal" tone="amber"/></div></Section>}
 function LatestJobs(){

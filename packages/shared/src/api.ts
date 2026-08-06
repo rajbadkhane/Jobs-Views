@@ -247,8 +247,8 @@ export const profileApi = {
   updateEmployer: (payload: Record<string, unknown>) => request<unknown>(api, { method: "PATCH", url: "/profiles/employer", data: payload }),
   updateAdmin: (payload: Record<string, unknown>) => request<unknown>(api, { method: "PATCH", url: "/profiles/admin", data: payload }),
   deleteMe: () => request<null>(api, { method: "DELETE", url: "/profiles/me" }),
-  uploadAvatar: (file: File) => request<unknown>(api, { method: "POST", url: "/profiles/avatar", data: formData("file", file), headers: { "Content-Type": "multipart/form-data" } }),
-  uploadResume: (file: File) => request<unknown>(api, { method: "POST", url: "/profiles/resume", data: formData("file", file), headers: { "Content-Type": "multipart/form-data" } }),
+  uploadAvatar: (file: File) => request<unknown>(api, { method: "POST", url: "/profiles/avatar", data: formData("file", file) }),
+  uploadResume: (file: File) => request<unknown>(api, { method: "POST", url: "/profiles/resume", data: formData("file", file) }),
   skills: () => request<unknown[]>(api, { method: "GET", url: "/profiles/skills" }),
   upsertSkill: (payload: Record<string, unknown>) => request<unknown>(api, { method: "POST", url: "/profiles/skills", data: payload }),
   deleteSkill: (id: string) => request<null>(api, { method: "DELETE", url: `/profiles/skills/${id}` }),
@@ -301,7 +301,7 @@ export const companyApi = {
   settings: (id: string) => request<unknown>(api, { method: "GET", url: `/companies/${id}/settings` }),
   updateSettings: (id: string, payload: Record<string, unknown>) => request<unknown>(api, { method: "PATCH", url: `/companies/${id}/settings`, data: payload }),
   uploadMedia: (id: string, type: "logo" | "banner" | "gallery" | "document", file: File) =>
-    request<unknown>(api, { method: "POST", url: `/companies/${id}/media/${type}`, data: formData("file", file), headers: { "Content-Type": "multipart/form-data" } }),
+    request<unknown>(api, { method: "POST", url: `/companies/${id}/media/${type}`, data: formData("file", file) }),
   setStatus: (id: string, payload: Record<string, unknown>) => request<unknown>(api, { method: "PATCH", url: `/companies/${id}/status`, data: payload }),
   verify: (id: string, payload: Record<string, unknown>) => request<unknown>(api, { method: "POST", url: `/companies/${id}/verification`, data: payload })
 };
@@ -414,8 +414,7 @@ export const advertisementsApi = {
         alt_text: fields.alt_text ?? "",
         placement: fields.placement ?? "homepage_hero",
         sort_order: String(fields.sort_order ?? 0)
-      }),
-      headers: { "Content-Type": "multipart/form-data" }
+      })
     }),
   update: (id: string, payload: Partial<Pick<Advertisement, "title" | "link_url" | "alt_text" | "placement" | "is_active" | "sort_order" | "starts_at" | "ends_at">>) =>
     request<Advertisement>(api, { method: "PATCH", url: `/admin/advertisements/${id}`, data: payload }),

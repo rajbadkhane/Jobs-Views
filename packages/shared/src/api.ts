@@ -384,6 +384,42 @@ export const adminApi = {
   commitSalaryImport: (id: string) => request<unknown>(api, { method: "POST", url: `/admin/salary/imports/${id}/commit` })
 };
 
+export type Advertisement = {
+  id: string;
+  title: string;
+  image_url: string;
+  link_url?: string | null;
+  alt_text?: string | null;
+  placement: string;
+  is_active: boolean;
+  sort_order: number;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  created_by_email?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const advertisementsApi = {
+  list: () => request<{ items: Advertisement[]; total: number }>(api, { method: "GET", url: "/admin/advertisements" }),
+  create: (file: File, fields: { title: string; link_url?: string; alt_text?: string; placement?: string; sort_order?: number }) =>
+    request<Advertisement>(api, {
+      method: "POST",
+      url: "/admin/advertisements",
+      data: formData("image", file, {
+        title: fields.title,
+        link_url: fields.link_url ?? "",
+        alt_text: fields.alt_text ?? "",
+        placement: fields.placement ?? "homepage_hero",
+        sort_order: String(fields.sort_order ?? 0)
+      }),
+      headers: { "Content-Type": "multipart/form-data" }
+    }),
+  update: (id: string, payload: Partial<Pick<Advertisement, "title" | "link_url" | "alt_text" | "placement" | "is_active" | "sort_order" | "starts_at" | "ends_at">>) =>
+    request<Advertisement>(api, { method: "PATCH", url: `/admin/advertisements/${id}`, data: payload }),
+  remove: (id: string) => request<null>(api, { method: "DELETE", url: `/admin/advertisements/${id}` })
+};
+
 export const subscriptionApi = {
   plans: () => request<{ items: CandidatePlan[] }>(api, { method: "GET", url: "/subscriptions/plans" }),
   me: () => request<CandidateSubscription>(api, { method: "GET", url: "/subscriptions/me" }),
@@ -406,7 +442,9 @@ export const razorpayApi = {
 
 export const contentApi = {
   list: (query?: QueryParams) => request<unknown[]>(api, { method: "GET", url: "/content", params: params(query) }),
-  bySlug: (type: string, slug: string) => request<unknown>(api, { method: "GET", url: `/content/${type}/${slug}` })
+  bySlug: (type: string, slug: string) => request<unknown>(api, { method: "GET", url: `/content/${type}/${slug}` }),
+  advertisements: (placement = "homepage_hero") =>
+    request<{ items: Advertisement[] }>(api, { method: "GET", url: "/content/advertisements", params: { placement } })
 };
 
 export const healthApi = {

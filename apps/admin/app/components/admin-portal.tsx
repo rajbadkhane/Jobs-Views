@@ -12,6 +12,7 @@ import { AppShell, Avatar, Badge, ErrorState, PageSkeleton } from "@career-os/ui
 
 import { BillingView, MarketplaceView, SubscriptionsView } from "./admin/business-views";
 import { CmsView, AuditView, MonitoringView, SettingsView, SeoView } from "./admin/content-views";
+import { AdvertisementsView } from "./admin/advertisements-view";
 import { DashboardView, UsersView, CompaniesView } from "./admin/core-views";
 import { JobsView, RecruitmentView } from "./admin/jobs-views";
 import { ReportsView, SupportView } from "./admin/ops-views";
@@ -28,6 +29,7 @@ export type AdminView =
   | "subscriptions"
   | "marketplace"
   | "cms"
+  | "advertisements"
   | "seo"
   | "reports"
   | "support"
@@ -178,6 +180,7 @@ const titles: Record<AdminView, string> = {
   subscriptions: "Subscriptions & Plans",
   marketplace: "Marketplace Operations",
   cms: "Content Management",
+  advertisements: "Advertisements",
   seo: "SEO Configuration",
   reports: "Reports",
   support: "Support",
@@ -204,6 +207,7 @@ const descriptions: Record<AdminView, string> = {
   marketplace:
     "Inspect marketplace products, coupons, boosts, operations, and automation records.",
   cms: "Review content entries returned by the CMS endpoint.",
+  advertisements: "Upload and manage homepage advertisement banners.",
   seo: "Review and maintain metadata templates backed by the SEO configuration store.",
   reports: "Request reports and review the generated report history.",
   support: "Review the support queue and create operational tickets.",
@@ -316,6 +320,7 @@ function dataOptions(view: AdminView): AdminDataOptions {
     return { ...none, plans: true, businessDashboard: true };
   if (view === "marketplace") return { ...none, marketplace: true };
   if (view === "cms") return { ...none, cms: true };
+  if (view === "advertisements") return none;
   if (view === "audit") return { ...none, audit: true };
   if (view === "monitoring") return { ...none, health: true };
   if (view === "settings") return { ...none, settings: true };
@@ -344,6 +349,7 @@ function viewQueries(
   if (view === "reports") return [data.reports as QueryState];
   if (view === "support") return [data.tickets as QueryState];
   if (view === "seo") return [data.seo as QueryState];
+  if (view === "advertisements") return [];
   const mapping: Partial<Record<AdminView, QueryState>> = {
     users: data.users as QueryState,
     candidates: data.users as QueryState,
@@ -373,6 +379,7 @@ function renderView(view: AdminView, live: AdminLive) {
   if (view === "subscriptions") return <SubscriptionsView live={live} />;
   if (view === "marketplace") return <MarketplaceView live={live} />;
   if (view === "cms") return <CmsView live={live} />;
+  if (view === "advertisements") return <AdvertisementsView />;
   if (view === "audit") return <AuditView live={live} />;
   if (view === "monitoring") return <MonitoringView live={live} />;
   if (view === "settings") return <SettingsView live={live} />;

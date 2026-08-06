@@ -8,6 +8,7 @@ import {
   BookOpen,
   Briefcase,
   Building2,
+  Megaphone,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -977,7 +978,7 @@ function navSectionFor(label: string, variant: AppShellVariant) {
     if (["Users", "Candidates", "Employers"].includes(label)) return "People";
     if (["Companies", "Jobs", "Recruitment"].includes(label)) return "Hiring";
     if (["Billing", "Subscriptions", "Marketplace"].includes(label)) return "Business";
-    if (["CMS", "SEO", "Reports"].includes(label)) return "Content";
+    if (["CMS", "Advertisements", "SEO", "Reports"].includes(label)) return "Content";
     return "Operations";
   }
   if (variant === "employer") {
@@ -997,6 +998,7 @@ function iconForNav(label: string) {
   if (label.includes("Profile")) return <UserCircle size={18} />;
   if (label.includes("User") || label.includes("Candidate") || label.includes("Employer") || label.includes("Team")) return <Users size={18} />;
   if (label.includes("Compan")) return <Building2 size={18} />;
+  if (label.includes("Advertisement")) return <Megaphone size={18} />;
   if (label.includes("Report") || label === "CMS" || label === "SEO") return <FileText size={18} />;
   if (label.includes("Audit") || label.includes("Monitor")) return <ShieldCheck size={18} />;
   if (label.includes("Notification")) return <Bell size={18} />;

@@ -11,6 +11,7 @@ import { salaryRouter, adminSalaryRouter } from "./handlers/salary_handler";
 import { adminRouter } from "./handlers/admin_handler";
 import { subscriptionsRouter, checkoutRouter } from "./handlers/subscriptions_handler";
 import { contentRouter } from "./handlers/content_handler";
+import { advertisementsRouter, publicAdvertisementsRouter } from "./handlers/advertisements_handler";
 import { healthRouter } from "./handlers/health_handler";
 
 export const app = new Hono<AppEnv>();
@@ -97,6 +98,8 @@ app.route("/admin/salary", adminSalaryRouter);
 // 8. Super Admin Analytics, CMS & Settings
 app.route("/api/v1/admin", adminRouter);
 app.route("/admin", adminRouter);
+app.route("/api/v1/admin/advertisements", advertisementsRouter);
+app.route("/admin/advertisements", advertisementsRouter);
 
 // 9. Subscriptions & Razorpay Checkout
 app.route("/api/v1/subscriptions", subscriptionsRouter);
@@ -107,6 +110,8 @@ app.route("/", checkoutRouter);
 // 10. Content & Programmatic SEO
 app.route("/api/v1/content", contentRouter);
 app.route("/content", contentRouter);
+app.route("/api/v1/content", publicAdvertisementsRouter);
+app.route("/content", publicAdvertisementsRouter);
 
 // 11. Edge Probes & Health Checks
 app.route("/api/v1", healthRouter);

@@ -99,6 +99,7 @@ export const navigation = {
     { label: "Subscriptions", href: "/admin/subscriptions" },
     { label: "Marketplace", href: "/admin/marketplace" },
     { label: "CMS", href: "/admin/cms" },
+    { label: "Advertisements", href: "/admin/advertisements" },
     { label: "SEO", href: "/admin/seo" },
     { label: "Reports", href: "/admin/reports" },
     { label: "Support", href: "/admin/support" },

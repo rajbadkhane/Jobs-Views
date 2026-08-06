@@ -15,6 +15,7 @@ const titles: Record<AdminView | "system", string> = {
   subscriptions: "Subscriptions",
   marketplace: "Marketplace",
   cms: "CMS",
+  advertisements: "Advertisements",
   seo: "SEO",
   reports: "Reports",
   support: "Support",

@@ -67,7 +67,7 @@ export function Navbar() {
       </div>
       <div className="relative">
         <button onClick={()=>{setExplore((value)=>!value);setServicesOpen(false)}} className={cn("inline-flex min-h-10 items-center gap-1 rounded-md px-3 text-sm font-semibold hover:bg-[var(--cos-surface-container-low)]",focus)} aria-expanded={explore}>Explore <ChevronDown size={15} className={cn("transition-transform duration-200", explore && "rotate-180")}/></button>
-        {explore?<div className="absolute -left-48 top-12 z-[100] grid w-[760px] grid-cols-3 gap-5 rounded-2xl border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)]/98 p-5 shadow-2xl backdrop-blur-2xl transition duration-200 animate-in fade-in-0 zoom-in-95">
+        {explore?<div className="absolute right-0 top-12 z-[100] grid w-[min(760px,calc(100vw-2rem))] grid-cols-3 gap-5 rounded-2xl border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)]/98 p-5 shadow-2xl backdrop-blur-2xl transition duration-200 animate-in fade-in-0 zoom-in-95">
           <div className="flex flex-col gap-2.5">
             <div className="flex items-center gap-2 border-b border-[var(--cos-outline-variant)] pb-2 text-xs font-extrabold uppercase tracking-wider text-[var(--cos-primary)]"><GraduationCap size={16}/><span>Experience &amp; Education</span></div>
             <div className="grid gap-1">

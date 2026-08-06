@@ -638,20 +638,23 @@ function MiniModule({ title, icon, href, items }: { title: string; icon: React.R
 
 function RadarVisual() {
   const points = careerIntelligence.healthBreakdown.slice(0, 8);
+  // Fixed (not responsive) size: the label ring below uses a fixed-pixel translate radius that
+  // must match the circle's actual rendered size, so the circle can't be allowed to shrink with
+  // its container on narrow screens without the labels detaching from it.
   return (
-    <div className="relative mx-auto grid aspect-square w-full max-w-[280px] place-items-center rounded-full border border-[var(--cos-outline-variant)] bg-[radial-gradient(circle,var(--cos-surface-container-low)_0_34%,transparent_35%),conic-gradient(from_0deg,#14B8A6,#2563EB,#7C3AED,#14B8A6)] p-6">
-      <div className="grid h-32 w-32 place-items-center rounded-full bg-[var(--cos-surface-container-lowest)] text-center shadow-career-sm">
+    <div className="relative mx-auto grid aspect-square w-[220px] max-w-full place-items-center rounded-full border border-[var(--cos-outline-variant)] bg-[radial-gradient(circle,var(--cos-surface-container-low)_0_34%,transparent_35%),conic-gradient(from_0deg,#14B8A6,#2563EB,#7C3AED,#14B8A6)] p-5">
+      <div className="grid h-24 w-24 place-items-center rounded-full bg-[var(--cos-surface-container-lowest)] text-center shadow-career-sm">
         <div>
-          <div className="text-3xl font-bold">{careerIntelligence.scores[0]?.value}</div>
+          <div className="text-2xl font-bold">{careerIntelligence.scores[0]?.value}</div>
           <div className="text-xs font-semibold text-[var(--cos-on-surface-variant)]">Health</div>
         </div>
       </div>
       {points.map((point, index) => (
         <span
           key={point.name}
-          className="absolute rounded-full bg-[var(--cos-surface-container-lowest)] px-2 py-1 text-[10px] font-semibold shadow-career-xs"
+          className="absolute rounded-full bg-[var(--cos-surface-container-lowest)] px-1.5 py-0.5 text-[9px] font-semibold shadow-career-xs"
           style={{
-            transform: `rotate(${index * 45}deg) translate(112px) rotate(-${index * 45}deg)`
+            transform: `rotate(${index * 45}deg) translate(86px) rotate(-${index * 45}deg)`
           }}
         >
           {point.name}

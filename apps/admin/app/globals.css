@@ -152,6 +152,10 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   background: var(--cos-surface);
@@ -163,6 +167,7 @@ body {
   text-rendering: optimizeLegibility;
   overscroll-behavior-y: contain;
   -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
 }
 
 button,

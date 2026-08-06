@@ -6,6 +6,7 @@ import { navigation } from "@career-os/config";
 import {
   useAdminActions,
   useAdminData,
+  useAuthActions,
   type AdminDataOptions,
 } from "@career-os/hooks";
 import { AppShell, Avatar, Badge, ErrorState, PageSkeleton } from "@career-os/ui";
@@ -228,6 +229,7 @@ const motionProps = {
 export function AdminPortal({ view }: { view: AdminView }) {
   const data = useAdminData(undefined, dataOptions(view));
   const live = { data, actions: useAdminActions() };
+  const auth = useAuthActions();
   const queries = viewQueries(view, data);
   const failed = queries.find((query) => query.isError);
   return (
@@ -247,6 +249,7 @@ export function AdminPortal({ view }: { view: AdminView }) {
           <Avatar name="Super Admin" verified />
         </div>
       }
+      onLogout={() => auth.logout.mutate()}
     >
       {queries.some((query) => query.isPending) ? (
         <PageSkeleton

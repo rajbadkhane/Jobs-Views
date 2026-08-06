@@ -1018,7 +1018,8 @@ export function AppShell({
   quickActionHref = "/resume",
   notificationItems = [],
   notificationUnread = 0,
-  variant = "candidate"
+  variant = "candidate",
+  onLogout
 }: {
   title: string;
   nav: { label: string; href: string }[];
@@ -1033,6 +1034,7 @@ export function AppShell({
   notificationItems?: Array<{ label: string; href?: string }>;
   notificationUnread?: number;
   variant?: AppShellVariant;
+  onLogout?: () => void;
 }) {
   const [collapsed, setCollapsed] = React.useState(false);
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
@@ -1050,11 +1052,12 @@ export function AppShell({
 
   const rootHref = variant === "admin" ? "/admin" : variant === "employer" ? "/employer" : "/candidate";
   const settingsHref = `${rootHref}/settings`;
-  const profileItems = variant === "admin"
+  const profileItems: Array<{ label: string; href?: string; onClick?: () => void; tone?: "default" | "danger" }> = variant === "admin"
     ? [{ label: "Admin dashboard", href: "/admin" }, { label: "Platform settings", href: settingsHref }]
     : variant === "employer"
       ? [{ label: "Employer workspace", href: "/employer" }, { label: "Employer settings", href: settingsHref }]
       : [{ label: "Candidate workspace", href: "/candidate" }, { label: "Candidate settings", href: settingsHref }];
+  if (onLogout) profileItems.push({ label: "Logout", onClick: onLogout, tone: "danger" });
 
   const closeTransient = React.useCallback(() => {
     setNotificationsOpen(false);
@@ -1260,13 +1263,29 @@ export function AppShell({
   );
 }
 
-function FloatingPanel({ title, items, emptyLabel = "Nothing to show", onNavigate }: { title: string; items: Array<{ label: string; href?: string }>; emptyLabel?: string; onNavigate?: () => void }) {
+function FloatingPanel({ title, items, emptyLabel = "Nothing to show", onNavigate }: { title: string; items: Array<{ label: string; href?: string; onClick?: () => void; tone?: "default" | "danger" }>; emptyLabel?: string; onNavigate?: () => void }) {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={careerMotion.notification} className="absolute right-0 top-12 z-50 w-72 rounded-[var(--radius-career-card)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)] p-2 shadow-career-floating dark:shadow-none">
       <div className="px-3 py-2 text-sm font-semibold">{title}</div>
       <div className="grid gap-1">
         {items.length === 0 ? <p className={cn("px-3 py-4 text-sm", mutedText)}>{emptyLabel}</p> : null}
-        {items.map((item) => item.href ? (
+        {items.map((item) => item.onClick ? (
+          <motion.button
+            key={item.label}
+            type="button"
+            onClick={() => { item.onClick?.(); onNavigate?.(); }}
+            initial={{ opacity: 0, x: 4 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={careerMotion.notification}
+            className={cn(
+              "rounded-[var(--radius-career-button)] px-3 py-2 text-left text-sm",
+              item.tone === "danger" ? "text-[var(--cos-error)] hover:bg-[var(--cos-error)]/10" : "text-[var(--cos-on-surface-variant)] hover:bg-[var(--cos-surface-container-low)] hover:text-[var(--cos-on-surface)]",
+              focusRing
+            )}
+          >
+            {item.label}
+          </motion.button>
+        ) : item.href ? (
           <motion.a key={`${item.label}-${item.href}`} href={item.href} onClick={onNavigate} initial={{ opacity: 0, x: 4 }} animate={{ opacity: 1, x: 0 }} transition={careerMotion.notification} className={cn("rounded-[var(--radius-career-button)] px-3 py-2 text-left text-sm text-[var(--cos-on-surface-variant)] hover:bg-[var(--cos-surface-container-low)] hover:text-[var(--cos-on-surface)]", focusRing)}>
             {item.label}
           </motion.a>

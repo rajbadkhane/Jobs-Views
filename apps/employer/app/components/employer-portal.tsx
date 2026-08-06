@@ -37,7 +37,7 @@ import {
 import React from "react";
 
 import { navigation } from "@career-os/config";
-import { useEmployerActions, useEmployerData } from "@career-os/hooks";
+import { useAuthActions, useEmployerActions, useEmployerData } from "@career-os/hooks";
 import {
   AppShell,
   Avatar,
@@ -172,6 +172,7 @@ export function EmployerPortal({ view }: { view: EmployerView }) {
     actions: useEmployerActions(companyId)
   };
   const companyName = company?.name ?? "Employer workspace";
+  const auth = useAuthActions();
 
   return (
     <AppShell
@@ -190,6 +191,7 @@ export function EmployerPortal({ view }: { view: EmployerView }) {
           <Avatar name={companyName} src={company?.logo_url} shape="company" verified={isVerified(company)} />
         </div>
       }
+      onLogout={() => auth.logout.mutate()}
     >
       <DataNotice queries={[companiesQuery, live.data.dashboard, live.data.jobs, live.data.team, live.data.branches, live.data.departments, live.data.applications, live.data.analytics, live.data.notifications]} />
       <motion.div {...motionProps} className="grid gap-6">

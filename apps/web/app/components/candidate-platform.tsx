@@ -27,6 +27,7 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import { navigation } from "@career-os/config";
 import {
+  useAuthActions,
   useCandidateActions,
   useCandidateData,
   useJobRecommendations,
@@ -150,6 +151,7 @@ const viewMotion = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 
 export function CandidatePlatform({ view }: { view: CandidateView }) {
   const data = useCandidateData(dataOptions(view));
   const actions = useCandidateActions();
+  const auth = useAuthActions();
   const jobsQuery = useJobsSearch({ sort: "latest", limit: 24 }, { enabled: view === "dashboard" || view === "recommended" });
   const candidate = useMemo(() => candidateRecord(data.profile.data), [data.profile.data]);
   const skills = items<SkillItem>(data.skills.data);
@@ -196,6 +198,7 @@ export function CandidatePlatform({ view }: { view: CandidateView }) {
       notificationUnread={unread}
       notificationItems={notifications.slice(0, 4).map((item) => ({ label: item.title || item.message || "Notification", href: "/candidate/notifications" }))}
       actions={<Avatar name={displayName(candidate)} src={candidate.avatar_url} />}
+      onLogout={() => auth.logout.mutate()}
     >
       {queries.some((query) => query.isPending) && !data.profile.data ? (
         <PageSkeleton variant={view === "dashboard" ? "dashboard" : view === "profile" || view === "settings" ? "form" : "list"} cards={view === "dashboard" ? 7 : 5} />

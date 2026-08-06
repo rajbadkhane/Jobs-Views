@@ -28,7 +28,7 @@ import {
 import React from "react";
 
 import { navigation } from "@career-os/config";
-import { useCandidateData } from "@career-os/hooks";
+import { useAuthActions, useCandidateData } from "@career-os/hooks";
 import {
   AppShell,
   Avatar,
@@ -152,6 +152,7 @@ const exclusiveWidgets = [
 
 export function CareerIntelligencePlatform({ view }: { view: CareerView }) {
   const data = useCandidateData({ profile: true, completion: true, skills: true, education: true, experience: true, applications: true, savedJobs: false, notifications: false, notificationSummary: false });
+  const auth = useAuthActions();
   const candidate = (data.profile.data && typeof data.profile.data === "object" ? (data.profile.data as { candidate?: CandidateRecord }).candidate ?? (data.profile.data as CandidateRecord) : {}) as CandidateRecord;
   const completionRaw = data.completion.data as Partial<Completion> | undefined;
   const applications = items<ApplicationItem>(data.applications.data);
@@ -186,6 +187,7 @@ export function CareerIntelligencePlatform({ view }: { view: CareerView }) {
           <Button size="sm" variant="secondary" loading={real.isFetching} disabled={real.isFetching} onClick={real.refetch}><Sparkles size={15} /> Refresh</Button>
         </div>
       }
+      onLogout={() => auth.logout.mutate()}
     >
       <motion.div {...motionProps} className="grid gap-6">
         <CareerCommandHeader view={view} real={real} />

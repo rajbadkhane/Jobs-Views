@@ -278,11 +278,11 @@ savedJobsRouter.post("/", async (c) => {
   if (!body.job_id) return c.json({ success: false, error: { code: 400, message: "job_id required" } }, 400);
   try {
     const sql = getDb(c.env);
-    await sql`INSERT INTO candidate_saved_jobs (user_id, job_id, created_at) VALUES (${auth.id}, ${body.job_id}, NOW()) ON CONFLICT DO NOTHING`.catch(() => {});
+    await sql`INSERT INTO candidate_saved_jobs (user_id, job_id, created_at) VALUES (${auth.id}, ${body.job_id}, NOW()) ON CONFLICT (user_id, job_id) DO NOTHING`;
     await sql.end();
     return c.json({ success: true, message: "Job bookmark added to saved list.", data: body });
   } catch (err: any) {
-    return c.json({ success: true, message: "Job bookmarked.", data: body });
+    return c.json({ success: false, error: { code: 500, message: "Failed to save job", details: err.message } }, 500);
   }
 });
 
@@ -291,11 +291,11 @@ savedJobsRouter.delete("/:jobId", async (c) => {
   const jobId = c.req.param("jobId");
   try {
     const sql = getDb(c.env);
-    await sql`DELETE FROM candidate_saved_jobs WHERE user_id = ${auth.id} AND job_id = ${jobId}`.catch(() => {});
+    await sql`DELETE FROM candidate_saved_jobs WHERE user_id = ${auth.id} AND job_id = ${jobId}`;
     await sql.end();
     return c.json({ success: true, message: "Job bookmark removed." });
   } catch (err: any) {
-    return c.json({ success: true, message: "Job bookmark removed." });
+    return c.json({ success: false, error: { code: 500, message: "Failed to remove saved job", details: err.message } }, 500);
   }
 });
 

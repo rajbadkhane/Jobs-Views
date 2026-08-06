@@ -52,7 +52,7 @@ export function Navbar() {
   const mode=useThemeStore((state)=>state.mode);const setMode=useThemeStore((state)=>state.setMode);const user=useAuthStore((state)=>state.user);
   useEffect(()=>{const close=(event:MouseEvent)=>{if(!root.current?.contains(event.target as Node)){setExplore(false);setServicesOpen(false);setMobile(false)}};const key=(event:KeyboardEvent)=>{if(event.key==="Escape"){setExplore(false);setServicesOpen(false);setMobile(false)}};document.addEventListener("mousedown",close);document.addEventListener("keydown",key);return()=>{document.removeEventListener("mousedown",close);document.removeEventListener("keydown",key)}},[]);
   const close=()=>{setExplore(false);setServicesOpen(false);setMobile(false)};
-  return <header className="sticky top-0 z-50 border-b border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)]/95 backdrop-blur"><div ref={root} className={cn(container,"flex min-h-16 items-center gap-3 py-2")}>
+  return <header className="sticky top-0 z-50 border-b border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)]/95 backdrop-blur"><div ref={root} className={cn(container,"relative flex min-h-16 items-center gap-3 py-2")}>
     <Link href="/" onClick={close} aria-label="Jobs View home" className={cn("relative h-12 w-14 shrink-0",focus)}><Image src="/images/logo-mark.png" fill sizes="56px" className="object-contain" alt="" priority /></Link>
     <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
       {publicRoutes.primary.map((route)=><Link key={route.href} href={route.href} className={cn("rounded-md px-3 py-2 text-sm font-semibold hover:bg-[var(--cos-surface-container-low)]",focus)}>{route.label}</Link>)}
@@ -65,30 +65,30 @@ export function Navbar() {
           </div>
         </div>:null}
       </div>
-      <div className="relative">
+      <div>
         <button onClick={()=>{setExplore((value)=>!value);setServicesOpen(false)}} className={cn("inline-flex min-h-10 items-center gap-1 rounded-md px-3 text-sm font-semibold hover:bg-[var(--cos-surface-container-low)]",focus)} aria-expanded={explore}>Explore <ChevronDown size={15} className={cn("transition-transform duration-200", explore && "rotate-180")}/></button>
-        {explore?<div className="absolute right-0 top-12 z-[100] grid w-[min(760px,calc(100vw-2rem))] grid-cols-3 gap-5 rounded-2xl border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)]/98 p-5 shadow-2xl backdrop-blur-2xl transition duration-200 animate-in fade-in-0 zoom-in-95">
-          <div className="flex flex-col gap-2.5">
-            <div className="flex items-center gap-2 border-b border-[var(--cos-outline-variant)] pb-2 text-xs font-extrabold uppercase tracking-wider text-[var(--cos-primary)]"><GraduationCap size={16}/><span>Experience &amp; Education</span></div>
-            <div className="grid gap-1">
-              {publicRoutes.explore.slice(0, 5).map((route)=><Link key={route.href+route.label} href={route.href} onClick={close} className="group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-[var(--cos-on-surface)] transition-all duration-150 hover:translate-x-1 hover:bg-[var(--cos-primary)]/10 hover:text-[var(--cos-primary)]"><span>{route.label}</span><ArrowRight size={14} className="opacity-0 transition-opacity group-hover:opacity-100 text-[var(--cos-primary)]"/></Link>)}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2.5">
-            <div className="flex items-center gap-2 border-b border-[var(--cos-outline-variant)] pb-2 text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400"><HeartPulse size={16}/><span>Healthcare &amp; Remote</span></div>
-            <div className="grid gap-1">
-              {publicRoutes.explore.slice(5, 10).map((route)=><Link key={route.href+route.label} href={route.href} onClick={close} className="group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-[var(--cos-on-surface)] transition-all duration-150 hover:translate-x-1 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400"><span>{route.label}</span><ArrowRight size={14} className="opacity-0 transition-opacity group-hover:opacity-100 text-emerald-600 dark:text-emerald-400"/></Link>)}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 rounded-xl border border-[var(--cos-outline-variant)] bg-slate-50 dark:bg-slate-900/60 p-3.5 shadow-inner">
-            <div className="flex items-center gap-2 border-b border-[var(--cos-outline-variant)] pb-2 text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400"><Sparkles size={16}/><span>Career Tools &amp; Growth</span></div>
-            <div className="grid gap-1">
-              {[publicRoutes.explore[10], ...publicRoutes.tools].filter(Boolean).map((route)=><Link key={route.href+route.label} href={route.href} onClick={close} className="group flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm font-bold text-[var(--cos-on-surface)] transition-all hover:bg-white dark:hover:bg-slate-800 hover:text-amber-600 dark:hover:text-amber-400 hover:shadow-sm"><span>{route.label}</span><ArrowRight size={13} className="opacity-0 transition-opacity group-hover:opacity-100 text-amber-500"/></Link>)}
-            </div>
-          </div>
-        </div>:null}
       </div>
     </nav>
+    {explore?<div className="absolute right-4 top-16 z-[100] grid w-[min(760px,calc(100vw-2rem))] grid-cols-3 gap-5 rounded-2xl border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-lowest)]/98 p-5 shadow-2xl backdrop-blur-2xl transition duration-200 animate-in fade-in-0 zoom-in-95">
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center gap-2 border-b border-[var(--cos-outline-variant)] pb-2 text-xs font-extrabold uppercase tracking-wider text-[var(--cos-primary)]"><GraduationCap size={16}/><span>Experience &amp; Education</span></div>
+        <div className="grid gap-1">
+          {publicRoutes.explore.slice(0, 5).map((route)=><Link key={route.href+route.label} href={route.href} onClick={close} className="group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-[var(--cos-on-surface)] transition-all duration-150 hover:translate-x-1 hover:bg-[var(--cos-primary)]/10 hover:text-[var(--cos-primary)]"><span>{route.label}</span><ArrowRight size={14} className="opacity-0 transition-opacity group-hover:opacity-100 text-[var(--cos-primary)]"/></Link>)}
+        </div>
+      </div>
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center gap-2 border-b border-[var(--cos-outline-variant)] pb-2 text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400"><HeartPulse size={16}/><span>Healthcare &amp; Remote</span></div>
+        <div className="grid gap-1">
+          {publicRoutes.explore.slice(5, 10).map((route)=><Link key={route.href+route.label} href={route.href} onClick={close} className="group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-[var(--cos-on-surface)] transition-all duration-150 hover:translate-x-1 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400"><span>{route.label}</span><ArrowRight size={14} className="opacity-0 transition-opacity group-hover:opacity-100 text-emerald-600 dark:text-emerald-400"/></Link>)}
+        </div>
+      </div>
+      <div className="flex flex-col gap-2 rounded-xl border border-[var(--cos-outline-variant)] bg-slate-50 dark:bg-slate-900/60 p-3.5 shadow-inner">
+        <div className="flex items-center gap-2 border-b border-[var(--cos-outline-variant)] pb-2 text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400"><Sparkles size={16}/><span>Career Tools &amp; Growth</span></div>
+        <div className="grid gap-1">
+          {[publicRoutes.explore[10], ...publicRoutes.tools].filter(Boolean).map((route)=><Link key={route.href+route.label} href={route.href} onClick={close} className="group flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm font-bold text-[var(--cos-on-surface)] transition-all hover:bg-white dark:hover:bg-slate-800 hover:text-amber-600 dark:hover:text-amber-400 hover:shadow-sm"><span>{route.label}</span><ArrowRight size={13} className="opacity-0 transition-opacity group-hover:opacity-100 text-amber-500"/></Link>)}
+        </div>
+      </div>
+    </div>:null}
     <button onClick={()=>window.dispatchEvent(new CustomEvent("jobsview:open-command-center"))} className={cn("ml-auto hidden min-h-10 min-w-52 items-center gap-2 rounded-full border border-[var(--cos-outline-variant)] px-4 text-sm text-[var(--cos-on-surface-variant)] md:flex",focus)}><Search size={16}/> Search <span className="ml-auto text-xs">Ctrl K</span></button>
     <Button variant="ghost" size="icon" aria-label="Change color theme" onClick={()=>setMode(mode==="dark"?"light":"dark")}>{mode==="dark"?<Sun size={17}/>:<Moon size={17}/>}</Button>
     {user?<><Link href="/candidate/notifications" aria-label="Notifications" className={cn("hidden rounded-md p-2 sm:inline-flex",focus)}><Bell size={18}/></Link><Link href="/candidate" className={cn("hidden items-center gap-2 rounded-md px-3 py-2 text-sm font-bold sm:inline-flex",focus)}><UserRound size={17}/> Dashboard</Link></>:<><Link href="/login" className="hidden px-2 py-2 text-sm font-bold sm:block">Login</Link><Link href="/register" className="hidden rounded-md bg-[var(--cos-primary)] px-4 py-2 text-sm font-bold text-white md:block">Register</Link></>}

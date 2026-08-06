@@ -38,11 +38,12 @@ const nextConfig = {
         key: "Content-Security-Policy",
         value: [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://checkout.razorpay.com",
           "style-src 'self' 'unsafe-inline'",
           "img-src 'self' data: blob: https:",
           "font-src 'self' data:",
-          `connect-src 'self' ${apiOrigin} ${monitoringOrigin} https://www.google-analytics.com https://www.clarity.ms`.trim(),
+          `connect-src 'self' ${apiOrigin} ${monitoringOrigin} https://www.google-analytics.com https://www.clarity.ms https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com`.trim(),
+          "frame-src https://api.razorpay.com https://checkout.razorpay.com",
           "frame-ancestors 'self'",
           "base-uri 'self'",
           "form-action 'self'"

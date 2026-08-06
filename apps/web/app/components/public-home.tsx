@@ -117,9 +117,9 @@ function AdvertisementCarousel(){
   const showSide=items.length>1;
   const activeDot=((index%items.length)+items.length)%items.length;
 
-  return <section className="relative overflow-hidden border-b border-[var(--cos-outline-variant)] bg-gradient-to-b from-slate-50 to-[var(--cos-surface)] py-8 dark:from-slate-950 dark:to-[var(--cos-surface)] sm:py-10">
-    <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(10,58,122,0.14),rgba(245,158,11,0.08)_60%,transparent_75%)] blur-2xl" aria-hidden="true"/>
-    <div className={cn(container,"mb-5 flex justify-center")}>
+  return <section className="relative overflow-hidden border-b border-[var(--cos-outline-variant)] bg-gradient-to-b from-slate-50 to-[var(--cos-surface)] py-4 dark:from-slate-950 dark:to-[var(--cos-surface)] sm:py-6">
+    <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(10,58,122,0.14),rgba(245,158,11,0.08)_60%,transparent_75%)] blur-2xl" aria-hidden="true"/>
+    <div className={cn(container,"mb-3 flex justify-center")}>
       <Badge tone="premium"><Sparkles size={13}/> Featured opportunities</Badge>
     </div>
     <div className={cn(container,"flex items-center justify-center gap-3 sm:gap-6")}>
@@ -127,7 +127,7 @@ function AdvertisementCarousel(){
       <CarouselSlide key={`center-${at(0).id}`} ad={at(0)} tone="center" solo={!showSide}/>
       {showSide?<CarouselSlide key={`right-${at(1).id}`} ad={at(1)} tone="side"/>:null}
     </div>
-    {showSide?<div className="mt-6 flex items-center justify-center gap-2" role="tablist" aria-label="Featured banner selector">
+    {showSide?<div className="mt-4 flex items-center justify-center gap-2" role="tablist" aria-label="Featured banner selector">
       {items.map((ad,i)=><button key={ad.id} type="button" role="tab" aria-selected={i===activeDot} aria-label={`Show ${ad.title}`} onClick={()=>setIndex(i)} className={cn("h-1.5 rounded-full transition-all duration-300",i===activeDot?"w-6 bg-[var(--cos-primary)]":"w-1.5 bg-[var(--cos-outline-variant)] hover:bg-[var(--cos-primary)]/50")}/>)}
     </div>:null}
   </section>;
@@ -141,9 +141,9 @@ function CarouselSlide({ad,tone,solo}:{ad:Advertisement;tone:"center"|"side";sol
     animate={{opacity:isCenter?1:0.35,scale:isCenter?1:0.76,filter:isCenter?"blur(0px)":"blur(4px)"}}
     transition={{duration:0.6,ease:"easeOut"}}
     className={cn(
-      "relative aspect-[3/4] w-[54vw] shrink-0 overflow-hidden rounded-2xl border bg-[var(--cos-surface-container-lowest)] shadow-2xl sm:w-[240px] lg:w-[280px]",
+      "relative aspect-[3/4] w-[42vw] shrink-0 overflow-hidden rounded-2xl border bg-[var(--cos-surface-container-lowest)] shadow-2xl sm:w-[190px] lg:w-[220px]",
       isCenter?"z-10 border-[var(--cos-primary)]/25 ring-4 ring-[var(--cos-primary)]/10":"border-[var(--cos-outline-variant)]",
-      solo&&"w-[62vw] sm:w-[280px] lg:w-[320px]"
+      solo&&"w-[48vw] sm:w-[220px] lg:w-[250px]"
     )}
   >
     <ResilientImage src={ad.image_url} alt={ad.alt_text||ad.title} fallbackLabel={ad.title} wrapperClassName="h-full w-full" className="object-cover"/>

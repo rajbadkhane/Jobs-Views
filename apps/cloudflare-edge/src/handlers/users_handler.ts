@@ -115,10 +115,19 @@ adminUsersRouter.get("/", async (c) => {
     const search = c.req.query("search") || c.req.query("q") || "";
     const sql = getDb(c.env);
     const users = await sql`
-      SELECT u.id, u.email, u.is_active, u.is_verified, u.created_at, r.name as role
+      SELECT u.id, u.email, u.is_active, u.is_verified, u.created_at, r.name as role,
+        sub.plan_name as subscription_plan, sub.status as subscription_status, sub.ends_at as subscription_ends_at
       FROM users u
       JOIN user_roles ur ON ur.user_id = u.id
       JOIN roles r ON r.id = ur.role_id
+      LEFT JOIN LATERAL (
+        SELECT p.name as plan_name, cs.status, cs.ends_at
+        FROM candidate_subscriptions cs
+        JOIN candidate_subscription_plans p ON p.id = cs.plan_id
+        WHERE cs.user_id = u.id
+        ORDER BY cs.created_at DESC
+        LIMIT 1
+      ) sub ON true
       WHERE u.deleted_at IS NULL
       ${roleFilter ? sql`AND r.name ILIKE ${roleFilter}` : sql``}
       ${search ? sql`AND u.email ILIKE ${'%' + search + '%'}` : sql``}

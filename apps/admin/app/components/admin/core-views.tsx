@@ -176,6 +176,7 @@ export function UsersView({
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("all");
   const [status, setStatus] = useState("all");
+  const [plan, setPlan] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<UserItem>();
   const [confirm, setConfirm] = useState<Confirmation>();
@@ -189,9 +190,13 @@ export function UsersView({
           (status === "all" ||
             (status === "active"
               ? user.is_active !== false
-              : user.is_active === false)),
+              : user.is_active === false)) &&
+          (plan === "all" ||
+            (plan === "subscribed"
+              ? user.subscription_status === "active"
+              : user.subscription_status !== "active")),
       ),
-    [all, fixedRole, role, search, status],
+    [all, fixedRole, plan, role, search, status],
   );
   const columns: AdminColumn<UserItem>[] = [
     {
@@ -234,6 +239,17 @@ export function UsersView({
       cell: (row) => (
         <StatusBadge value={row.is_verified ? "Verified" : "Pending"} />
       ),
+    },
+    {
+      id: "plan",
+      header: "Plan",
+      sortValue: (row) => row.subscription_status === "active" ? row.subscription_plan : "",
+      cell: (row) =>
+        row.subscription_status === "active" ? (
+          <Badge tone="premium">{row.subscription_plan || "Subscribed"}</Badge>
+        ) : (
+          <Badge>Free</Badge>
+        ),
     },
     {
       id: "created",
@@ -310,6 +326,16 @@ export function UsersView({
                 ["suspended", "Suspended"],
               ]}
             />
+            <Select
+              value={plan}
+              onChange={setPlan}
+              label="Plan"
+              options={[
+                ["all", "All plans"],
+                ["subscribed", "Subscribed"],
+                ["free", "Free"],
+              ]}
+            />
           </FilterGroup>
         }
         bulkActions={[
@@ -336,6 +362,13 @@ export function UsersView({
               value: detail?.is_active === false ? "Suspended" : "Active",
             },
             { label: "Verified", value: detail?.is_verified ? "Yes" : "No" },
+            {
+              label: "Subscription",
+              value:
+                detail?.subscription_status === "active"
+                  ? `${detail.subscription_plan || "Subscribed"} (until ${formatDate(detail.subscription_ends_at)})`
+                  : "Free",
+            },
             { label: "Created", value: formatDate(detail?.created_at) },
           ]}
         />

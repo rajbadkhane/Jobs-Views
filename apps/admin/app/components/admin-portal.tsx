@@ -72,6 +72,9 @@ export type UserItem = {
   is_active?: boolean;
   is_verified?: boolean;
   created_at?: string;
+  subscription_plan?: string;
+  subscription_status?: string;
+  subscription_ends_at?: string;
 };
 export type PlanItem = {
   id?: number;

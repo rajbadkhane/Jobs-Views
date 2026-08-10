@@ -32,8 +32,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     hydrateTheme();
   }, [hydrateAuth, hydrateTheme]);
 
-  useRoleGuard(["EMPLOYER"], "/employer/login");
-
   useEffect(() => {
     const root = document.documentElement;
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -42,9 +40,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
+      <RoleGuard />
       <ProductionRuntime />
       <UniversalCommandCenter nav={navigation.employer} role="employer" />
       {children}
     </QueryClientProvider>
   );
+}
+
+function RoleGuard() {
+  useRoleGuard(["EMPLOYER"], "/employer/login");
+  return null;
 }

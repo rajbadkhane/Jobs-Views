@@ -30,7 +30,7 @@ export function LanguageSwitcher() {
     const selectField = document.querySelector(".goog-te-combo") as HTMLSelectElement | null;
     if (selectField) {
       selectField.value = nextLang === "en" ? "en" : "hi";
-      selectField.dispatchEvent(new Event("change"));
+      selectField.dispatchEvent(new Event("change", { bubbles: true }));
     } else {
       // Fallback: set the cookie and reload
       if (nextLang === "hi") {

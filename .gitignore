@@ -64,3 +64,6 @@ redisdata/
 .vercel
 .env*
 .dev.vars
+
+.vercel
+.env*

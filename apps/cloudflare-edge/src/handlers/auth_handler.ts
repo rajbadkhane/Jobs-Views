@@ -6,8 +6,6 @@ import { sendMail, resetPasswordEmailHTML, registrationOtpEmailHTML } from "../l
 
 export const authRouter = new Hono<{ Bindings: Env }>();
 
-const DEFAULT_SECRET = "jv_prod_jwt_access_8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e";
-
 function numericOTP(length: number): string {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
@@ -33,10 +31,13 @@ async function hashToken(token: string): Promise<string> {
 
 async function generateToken(
   payload: { id: string; email: string; role: string; permissions: string[] },
-  secret: string,
+  secret: string | undefined,
   expiresInSeconds = 3600
 ): Promise<string> {
-  const secretKey = new TextEncoder().encode(secret || DEFAULT_SECRET);
+  if (!secret) {
+    throw new Error("JWT_ACCESS_SECRET is not configured — refusing to issue tokens.");
+  }
+  const secretKey = new TextEncoder().encode(secret);
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -113,7 +114,7 @@ authRouter.post("/register", async (c) => {
 
     // 3. Issue authentication tokens
     const SESSION_TTL_SECONDS = 72 * 3600;
-    const accessToken = await generateToken({ id: userId!, email, role, permissions }, c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET, SESSION_TTL_SECONDS);
+    const accessToken = await generateToken({ id: userId!, email, role, permissions }, c.env.JWT_ACCESS_SECRET, SESSION_TTL_SECONDS);
     const refreshToken = crypto.randomUUID() + crypto.randomUUID();
     const tokenHash = await hashToken(refreshToken);
     const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
@@ -295,7 +296,7 @@ authRouter.post("/login", async (c) => {
     }
 
     const SESSION_TTL_SECONDS = 72 * 3600;
-    const accessToken = await generateToken({ id: user.id, email: user.email, role: user.role, permissions }, c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET, SESSION_TTL_SECONDS);
+    const accessToken = await generateToken({ id: user.id, email: user.email, role: user.role, permissions }, c.env.JWT_ACCESS_SECRET, SESSION_TTL_SECONDS);
     const refreshToken = crypto.randomUUID() + crypto.randomUUID();
     const tokenHash = await hashToken(refreshToken);
     const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
@@ -305,7 +306,7 @@ authRouter.post("/login", async (c) => {
         INSERT INTO user_sessions (user_id, refresh_token_hash, user_agent, ip_address, expires_at)
         VALUES (${user.id}, ${tokenHash}, ${userAgent}, NULLIF(${ip}, '')::inet, ${expiresAt})
       `;
-      // Enforce 5-concurrent device limit
+      // Enforce 10-concurrent device limit
       await tx`
         UPDATE user_sessions
         SET revoked_at = NOW()
@@ -313,7 +314,7 @@ authRouter.post("/login", async (c) => {
           SELECT id FROM user_sessions
           WHERE user_id = ${user.id} AND revoked_at IS NULL AND expires_at > NOW()
           ORDER BY created_at DESC
-          LIMIT 5
+          LIMIT 10
         )
       `;
     });
@@ -452,7 +453,7 @@ authRouter.post("/google-callback", async (c) => {
 
     // 5. Issue Tokens
     const SESSION_TTL_SECONDS = 72 * 3600;
-    const accessToken = await generateToken({ id: userId!, email, role: userRole, permissions }, c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET, SESSION_TTL_SECONDS);
+    const accessToken = await generateToken({ id: userId!, email, role: userRole, permissions }, c.env.JWT_ACCESS_SECRET, SESSION_TTL_SECONDS);
     const refreshToken = crypto.randomUUID() + crypto.randomUUID();
     const tokenHash = await hashToken(refreshToken);
     const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
@@ -465,7 +466,7 @@ authRouter.post("/google-callback", async (c) => {
       await tx`
         UPDATE user_sessions SET revoked_at = NOW()
         WHERE user_id = ${userId} AND revoked_at IS NULL AND id NOT IN (
-          SELECT id FROM user_sessions WHERE user_id = ${userId} AND revoked_at IS NULL AND expires_at > NOW() ORDER BY created_at DESC LIMIT 5
+          SELECT id FROM user_sessions WHERE user_id = ${userId} AND revoked_at IS NULL AND expires_at > NOW() ORDER BY created_at DESC LIMIT 10
         )
       `;
     });
@@ -522,7 +523,7 @@ authRouter.post("/refresh", async (c) => {
     await sql`UPDATE user_sessions SET refresh_token_hash = ${newHash}, expires_at = ${expiresAt} WHERE refresh_token_hash = ${oldHash}`;
     await sql.end();
     const SESSION_TTL_SECONDS = 72 * 3600;
-    const accessToken = await generateToken({ id: user.id, email: user.email, role: user.role, permissions: ["*"] }, c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET, SESSION_TTL_SECONDS);
+    const accessToken = await generateToken({ id: user.id, email: user.email, role: user.role, permissions: ["*"] }, c.env.JWT_ACCESS_SECRET, SESSION_TTL_SECONDS);
     return c.json({
       success: true,
       data: {
@@ -624,7 +625,11 @@ authRouter.get("/me", async (c) => {
   }
   const token = authHeader.replace("Bearer ", "").trim();
   try {
-    const secretKey = new TextEncoder().encode(c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET);
+    if (!c.env.JWT_ACCESS_SECRET) {
+      console.error("[Edge Auth] JWT_ACCESS_SECRET is not configured — refusing to verify tokens.");
+      return c.json({ success: false, error: { code: 500, message: "Authentication is misconfigured." } }, 500);
+    }
+    const secretKey = new TextEncoder().encode(c.env.JWT_ACCESS_SECRET);
     const { payload } = await jwtVerify(token, secretKey);
     return c.json({
       success: true,

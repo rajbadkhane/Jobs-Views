@@ -9,6 +9,49 @@ import { createId } from "@career-os/utils";
 
 const ACCESS_TOKEN_KEY = "jobsview.access_token";
 const REFRESH_TOKEN_KEY = "jobsview.refresh_token";
+const SHARED_SESSION_COOKIE = "jv_session";
+
+// The candidate, employer, and admin apps live on separate subdomains
+// (www / employer / admin .jobsviews.com), so tokens in localStorage never
+// cross an app boundary. A cookie scoped to the parent domain does — a page
+// is always allowed to set a cookie for its own host or a superdomain of it,
+// so this works without any backend/DNS changes. Not HttpOnly, but tokens
+// are already readable via localStorage today, so this isn't a regression.
+function sharedCookieDomain(): string | null {
+  if (typeof window === "undefined") return null;
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return null;
+  return host.endsWith("jobsviews.com") ? ".jobsviews.com" : null;
+}
+
+function writeSharedSessionCookie(accessToken: string, refreshToken?: string) {
+  if (typeof document === "undefined") return;
+  const domain = sharedCookieDomain();
+  const value = encodeURIComponent(JSON.stringify({ a: accessToken, r: refreshToken ?? "" }));
+  const maxAge = 60 * 60 * 24 * 30;
+  document.cookie = `${SHARED_SESSION_COOKIE}=${value}; path=/; max-age=${maxAge}${domain ? `; domain=${domain}` : ""}`;
+}
+
+function readSharedSessionCookie(): { accessToken: string; refreshToken?: string } | null {
+  if (typeof document === "undefined") return null;
+  const row = document.cookie.split("; ").find((entry) => entry.startsWith(`${SHARED_SESSION_COOKIE}=`));
+  if (!row) return null;
+  try {
+    const parsed = JSON.parse(decodeURIComponent(row.slice(SHARED_SESSION_COOKIE.length + 1))) as { a?: string; r?: string };
+    if (!parsed.a) return null;
+    return { accessToken: parsed.a, refreshToken: parsed.r || undefined };
+  } catch {
+    return null;
+  }
+}
+
+function clearSharedSessionCookie() {
+  if (typeof document === "undefined") return;
+  const domain = sharedCookieDomain();
+  document.cookie = `${SHARED_SESSION_COOKIE}=; path=/; max-age=0${domain ? `; domain=${domain}` : ""}`;
+  // Also clear a host-only variant in case it was ever set without the shared domain (e.g. during local dev).
+  document.cookie = `${SHARED_SESSION_COOKIE}=; path=/; max-age=0`;
+}
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 type TelemetryPayload = Record<string, unknown>;
@@ -135,6 +178,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (tokens) {
         localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
         if (tokens.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+        writeSharedSessionCookie(tokens.accessToken, tokens.refreshToken);
       } else if (localStorage.getItem(ACCESS_TOKEN_KEY)) {
         activeTokens = {
           accessToken: localStorage.getItem(ACCESS_TOKEN_KEY)!,
@@ -148,17 +192,27 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== "undefined") {
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
+      clearSharedSessionCookie();
     }
     set({ user: null, tokens: null });
   },
   hydrate: () => {
     if (typeof window === "undefined") return;
-      const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-      const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-      set({
-        tokens: accessToken ? { accessToken, refreshToken: refreshToken ?? undefined } : null,
-        hydrated: true
-      });
+    let accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+    let refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!accessToken) {
+      const shared = readSharedSessionCookie();
+      if (shared) {
+        accessToken = shared.accessToken;
+        refreshToken = shared.refreshToken ?? null;
+        localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+        if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      }
+    }
+    set({
+      tokens: accessToken ? { accessToken, refreshToken: refreshToken ?? undefined } : null,
+      hydrated: true
+    });
   }
 }));
 

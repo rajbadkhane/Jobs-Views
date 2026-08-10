@@ -2,8 +2,6 @@ import { Context, Next } from "hono";
 import { jwtVerify } from "jose";
 import { Env } from "./db";
 
-const DEFAULT_SECRET = "jv_prod_jwt_access_8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e";
-
 export interface AuthContext {
   id: string;
   email: string;
@@ -30,7 +28,11 @@ export const authenticate = () => async (c: Context<AppEnv>, next: Next) => {
 
   const token = authHeader.replace("Bearer ", "").trim();
   try {
-    const secretKey = new TextEncoder().encode(c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET);
+    if (!c.env.JWT_ACCESS_SECRET) {
+      console.error("[Edge Auth] JWT_ACCESS_SECRET is not configured — refusing to verify tokens.");
+      return c.json({ success: false, error: { code: 500, message: "Authentication is misconfigured." } }, 500);
+    }
+    const secretKey = new TextEncoder().encode(c.env.JWT_ACCESS_SECRET);
     const { payload } = await jwtVerify(token, secretKey);
     const user: AuthContext = {
       id: (payload.id || "").toString(),

@@ -6,6 +6,7 @@ import { useEffect, useMemo } from "react";
 
 import { appConfig } from "@career-os/config";
 import { useAuthStore, useThemeStore } from "@career-os/shared";
+import { useRoleGuard } from "@career-os/hooks";
 import { AdminCommandCenter } from "./components/admin-command-center";
 import { ProductionRuntime } from "./production-runtime";
 
@@ -30,6 +31,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     hydrateAuth();
     hydrateTheme();
   }, [hydrateAuth, hydrateTheme]);
+
+  useRoleGuard(["ADMIN", "SUPER_ADMIN"], "/admin/login");
 
   useEffect(() => {
     const root = document.documentElement;

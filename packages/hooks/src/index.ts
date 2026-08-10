@@ -189,7 +189,7 @@ export function useSubscriptionActions() {
   };
 }
 
-export function useSession() {
+export function useSession(options: { enabled?: boolean } = {}) {
   const setSession = useAuthStore((state) => state.setSession);
   const clearSession = useAuthStore((state) => state.clearSession);
   return useQuery({
@@ -205,11 +205,47 @@ export function useSession() {
       });
       return user;
     },
+    enabled: options.enabled ?? true,
     retry: false,
     meta: {
       onError: clearSession
     }
   });
+}
+
+/**
+ * Guards an app that only makes sense for specific roles (e.g. the employer
+ * or admin workspace). Each app lives on its own subdomain, so a session
+ * created by logging in elsewhere only becomes visible here after hydrate()
+ * picks up the shared cross-app cookie - this waits for that, resolves the
+ * account's real role via /auth/me, and sends mismatched accounts to the
+ * workspace that actually matches their role instead of rendering a broken
+ * shell for a role that was never authorized here.
+ */
+export function useRoleGuard(allowedRoles: readonly string[], unauthenticatedHref: string) {
+  const hydrated = useAuthStore((state) => state.hydrated);
+  const hasTokens = useAuthStore((state) => Boolean(state.tokens?.accessToken));
+  const session = useSession({ enabled: hydrated && hasTokens });
+
+  useEffect(() => {
+    if (!hydrated || typeof window === "undefined") return;
+    if (window.location.pathname === unauthenticatedHref) return;
+    if (!hasTokens) {
+      window.location.href = unauthenticatedHref;
+      return;
+    }
+    if (session.isError) {
+      window.location.href = unauthenticatedHref;
+      return;
+    }
+    const role = session.data?.role;
+    if (role && !allowedRoles.includes(role)) {
+      window.location.href = roleHome(role);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, hasTokens, session.isError, session.data?.role]);
+
+  return { checking: !hydrated || (hasTokens && session.isPending) };
 }
 
 export function useAuthActions() {

@@ -6,7 +6,7 @@ import { useEffect, useMemo } from "react";
 
 import { appConfig, navigation } from "@career-os/config";
 import { useAuthStore, useThemeStore } from "@career-os/shared";
-import { UniversalCommandCenter } from "@career-os/ui";
+import { ToastViewport, UniversalCommandCenter } from "@career-os/ui";
 import { ProductionRuntime } from "./production-runtime";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -40,6 +40,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={client}>
       <ProductionRuntime />
+      <ToastViewport />
       <UniversalCommandCenter nav={[...navigation.public, ...navigation.candidate]} role="candidate" />
       {children}
     </QueryClientProvider>

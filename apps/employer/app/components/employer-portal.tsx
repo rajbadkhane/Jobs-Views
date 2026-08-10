@@ -34,7 +34,7 @@ import {
   Webhook,
   Zap
 } from "lucide-react";
-import React from "react";
+import React, { useEffect } from "react";
 
 import { navigation } from "@career-os/config";
 import { useAuthActions, useEmployerActions, useEmployerData } from "@career-os/hooks";
@@ -173,6 +173,14 @@ export function EmployerPortal({ view }: { view: EmployerView }) {
   };
   const companyName = company?.name ?? "Employer workspace";
   const auth = useAuthActions();
+
+  useEffect(() => {
+    if (companiesQuery.isPending || typeof window === "undefined") return;
+    if (window.location.pathname.startsWith("/pending") || window.location.pathname.startsWith("/rejected") || window.location.pathname.startsWith("/suspended")) return;
+    if (company?.status === "rejected") window.location.href = "/rejected";
+    else if (company?.status === "suspended") window.location.href = "/suspended";
+    else if (!company || company.status === "pending") window.location.href = "/pending";
+  }, [companiesQuery.isPending, company]);
 
   return (
     <AppShell

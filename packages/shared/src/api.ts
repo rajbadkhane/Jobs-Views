@@ -121,6 +121,9 @@ export type PublicCompany = {
   industry?: string;
   founded_year?: number;
   headquarters?: string;
+  gst_number?: string;
+  cin_number?: string;
+  verification_notes?: string;
   social_links?: Record<string, unknown>;
   benefits?: string[];
   gallery?: string[];

@@ -171,8 +171,14 @@ jobsRouter.post("/", authenticate(), async (c) => {
       if (ep.length > 0) companyId = ep[0].company_id;
     }
     if (!companyId) {
-      const defaultCo = await sql`INSERT INTO companies (name, slug, status) VALUES (${auth.email + " Corp"}, ${slugify(auth.email) + "-" + Math.floor(1000 + Math.random()*9000)}, 'approved') RETURNING id`;
+      const defaultCo = await sql`INSERT INTO companies (name, slug, status) VALUES (${auth.email + " Corp"}, ${slugify(auth.email) + "-" + Math.floor(1000 + Math.random()*9000)}, 'pending') RETURNING id`;
       companyId = defaultCo[0].id;
+    }
+
+    const companyRows = await sql`SELECT status FROM companies WHERE id = ${companyId} LIMIT 1`;
+    if (companyRows.length === 0 || companyRows[0].status !== "approved") {
+      await sql.end();
+      return c.json({ success: false, error: { code: 403, message: "Your company must be approved by an administrator before you can post jobs." } }, 403);
     }
 
     const title = (body.title || "Career Opening").toString().trim();
@@ -213,7 +219,17 @@ jobsRouter.patch("/:id", authenticate(), async (c) => {
         title = COALESCE(${body.title ?? null}, title),
         status = COALESCE(${body.status ?? null}, status),
         short_description = COALESCE(${body.short_description ?? null}, short_description),
-        work_mode = COALESCE(${body.work_mode ?? null}, work_mode),
+        full_description = COALESCE(${body.full_description ?? null}, full_description),
+        work_mode = COALESCE(${body.work_mode ? formatWorkMode(body.work_mode) : null}, work_mode),
+        city = COALESCE(${body.city ?? null}, city),
+        state = COALESCE(${body.state ?? null}, state),
+        country = COALESCE(${body.country ?? null}, country),
+        salary_min = COALESCE(${body.salary_min != null ? Number(body.salary_min) : null}, salary_min),
+        salary_max = COALESCE(${body.salary_max != null ? Number(body.salary_max) : null}, salary_max),
+        experience_min = COALESCE(${body.experience_min != null ? Number(body.experience_min) : null}, experience_min),
+        experience_max = COALESCE(${body.experience_max != null ? Number(body.experience_max) : null}, experience_max),
+        openings = COALESCE(${body.openings != null ? Number(body.openings) : null}, openings),
+        education = COALESCE(${body.education ?? null}, education),
         updated_at = NOW()
       WHERE id = ${id}
     `.catch(() => {});

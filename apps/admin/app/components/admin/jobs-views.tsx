@@ -15,6 +15,36 @@ import { AdminDrawer, DetailList, PublicLink } from "../admin-overlays";
 import { ConfirmationDialog, DetailArray, ActivityTimeline, FilterGroup, Select, StatusBadge, TextArea, TextField } from "./shared";
 import { experience, formatDate, isString, isWithinDays, items, matchesExperience, salary, timestamp, titleCase, unique } from "./utils";
 
+type JobEditForm = {
+  title: string;
+  short_description: string;
+  full_description: string;
+  work_mode: string;
+  city: string;
+  state: string;
+  salary_min: string;
+  salary_max: string;
+  experience_min: string;
+  experience_max: string;
+  openings: string;
+};
+
+function jobToEditForm(job: PublicJob): JobEditForm {
+  return {
+    title: job.title || "",
+    short_description: job.short_description || "",
+    full_description: job.full_description || "",
+    work_mode: job.work_mode || "on_site",
+    city: job.city || "",
+    state: job.state || "",
+    salary_min: job.salary_min != null ? String(job.salary_min) : "",
+    salary_max: job.salary_max != null ? String(job.salary_max) : "",
+    experience_min: job.experience_min != null ? String(job.experience_min) : "",
+    experience_max: job.experience_max != null ? String(job.experience_max) : "",
+    openings: job.openings != null ? String(job.openings) : "",
+  };
+}
+
 export function JobsView({ live }: { live: AdminLive }) {
   const all = items<PublicJob>(live.data.jobs.data);
   const [search, setSearch] = useState("");
@@ -27,6 +57,49 @@ export function JobsView({ live }: { live: AdminLive }) {
   const [detail, setDetail] = useState<PublicJob>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<Confirmation>();
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<JobEditForm>();
+  const openDetail = (job: PublicJob) => {
+    setDetail(job);
+    setEditing(false);
+    setEditForm(undefined);
+  };
+  const startEdit = () => {
+    if (!detail) return;
+    setEditForm(jobToEditForm(detail));
+    setEditing(true);
+  };
+  const saveEdit = async () => {
+    if (!detail || !editForm) return;
+    await live.actions.updateJob.mutateAsync({
+      id: detail.id,
+      payload: {
+        title: editForm.title,
+        short_description: editForm.short_description,
+        full_description: editForm.full_description,
+        work_mode: editForm.work_mode,
+        city: editForm.city,
+        state: editForm.state,
+        salary_min: editForm.salary_min === "" ? undefined : Number(editForm.salary_min),
+        salary_max: editForm.salary_max === "" ? undefined : Number(editForm.salary_max),
+        experience_min: editForm.experience_min === "" ? undefined : Number(editForm.experience_min),
+        experience_max: editForm.experience_max === "" ? undefined : Number(editForm.experience_max),
+        openings: editForm.openings === "" ? undefined : Number(editForm.openings),
+      },
+    });
+    setEditing(false);
+    setDetail(undefined);
+  };
+  const deleteJob = (job: PublicJob) =>
+    setConfirm({
+      title: `Delete ${job.title}?`,
+      description: "This removes the job from the public catalog. The record is archived, not permanently erased.",
+      label: "Delete",
+      intent: "danger",
+      busy: live.actions.deleteJob.isPending,
+      run: () =>
+        live.actions.deleteJob.mutateAsync(job.id).then(() => setDetail(undefined)),
+    });
   const rows = useMemo(
     () =>
       all.filter(
@@ -148,7 +221,7 @@ export function JobsView({ live }: { live: AdminLive }) {
         rows={rows}
         columns={columns}
         rowKey={(row) => row.id}
-        onOpen={setDetail}
+        onOpen={openDetail}
         selected={selected}
         onSelectedChange={setSelected}
         search={search}
@@ -238,8 +311,54 @@ export function JobsView({ live }: { live: AdminLive }) {
         open={Boolean(detail)}
         title={detail?.title || "Job details"}
         description={detail?.company_name}
-        onClose={() => setDetail(undefined)}
+        onClose={() => {
+          setDetail(undefined);
+          setEditing(false);
+        }}
       >
+        {editing && editForm ? (
+          <div className="grid gap-4">
+            <TextField label="Title" value={editForm.title} setValue={(value) => setEditForm({ ...editForm, title: value })} />
+            <TextArea label="Short description" value={editForm.short_description} setValue={(value) => setEditForm({ ...editForm, short_description: value })} />
+            <TextArea label="Full description" value={editForm.full_description} setValue={(value) => setEditForm({ ...editForm, full_description: value })} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField label="City" value={editForm.city} setValue={(value) => setEditForm({ ...editForm, city: value })} />
+              <TextField label="State" value={editForm.state} setValue={(value) => setEditForm({ ...editForm, state: value })} />
+            </div>
+            <Select
+              label="Work mode"
+              value={editForm.work_mode}
+              onChange={(value) => setEditForm({ ...editForm, work_mode: value })}
+              options={[
+                ["on_site", "On-site"],
+                ["hybrid", "Hybrid"],
+                ["remote", "Remote"],
+              ]}
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField label="Salary min" type="number" value={editForm.salary_min} setValue={(value) => setEditForm({ ...editForm, salary_min: value })} />
+              <TextField label="Salary max" type="number" value={editForm.salary_max} setValue={(value) => setEditForm({ ...editForm, salary_max: value })} />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField label="Experience min" type="number" value={editForm.experience_min} setValue={(value) => setEditForm({ ...editForm, experience_min: value })} />
+              <TextField label="Experience max" type="number" value={editForm.experience_max} setValue={(value) => setEditForm({ ...editForm, experience_max: value })} />
+            </div>
+            <TextField label="Openings" type="number" value={editForm.openings} setValue={(value) => setEditForm({ ...editForm, openings: value })} />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                loading={live.actions.updateJob.isPending}
+                disabled={live.actions.updateJob.isPending}
+                onClick={saveEdit}
+              >
+                Save changes
+              </Button>
+              <Button variant="secondary" onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+        <>
         <DetailList
           items={[
             { label: "Status", value: detail?.status },
@@ -286,6 +405,9 @@ export function JobsView({ live }: { live: AdminLive }) {
         <div className="mt-5 flex flex-wrap gap-2">
           {detail ? (
             <>
+              <Button variant="secondary" onClick={startEdit}>
+                Edit
+              </Button>
               <Button onClick={() => moderate(detail, "published")}>
                 Publish
               </Button>
@@ -306,6 +428,9 @@ export function JobsView({ live }: { live: AdminLive }) {
                 onClick={() => moderate(detail, "archived")}
               >
                 Archive
+              </Button>
+              <Button variant="danger" onClick={() => deleteJob(detail)}>
+                Delete
               </Button>
               <Button
                 variant="secondary"
@@ -355,6 +480,8 @@ export function JobsView({ live }: { live: AdminLive }) {
             },
           ]}
         />
+        </>
+        )}
       </AdminDrawer>
       <ConfirmationDialog value={confirm} setValue={setConfirm} />
     </>
@@ -441,8 +568,8 @@ function QuickPostJobForm({ live }: { live: AdminLive }) {
           })),
         },
         publish: form.publish,
-      })) as { public_url?: string };
-      setPublicURL(result.public_url || "");
+      })) as { seo?: { canonical_url?: string }; job?: { slug?: string } };
+      setPublicURL(result.seo?.canonical_url || (result.job?.slug ? `/jobs/${result.job.slug}` : ""));
       setForm(blank);
     } catch (caught) {
       setError(apiErrorMessage(caught));
@@ -743,15 +870,18 @@ function QuickPostJobForm({ live }: { live: AdminLive }) {
           </Button>
         </div>
         {publicURL ? (
-          <PublicLink
-            href={
-              publicURL.startsWith("http")
-                ? publicURL
-                : `${publicSiteURL}${publicURL}`
-            }
-          >
-            Open published job
-          </PublicLink>
+          <div className="flex flex-wrap items-center gap-2 rounded border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-[var(--cos-success-text)] dark:border-emerald-900/70 dark:bg-emerald-950/40">
+            Job saved successfully.
+            <PublicLink
+              href={
+                publicURL.startsWith("http")
+                  ? publicURL
+                  : `${publicSiteURL}${publicURL}`
+              }
+            >
+              Open published job
+            </PublicLink>
+          </div>
         ) : null}
         {error ? (
           <p

@@ -77,11 +77,11 @@ companiesRouter.post("/", authenticate(), async (c) => {
     const sql = getDb(c.env);
     const inserted = await sql`
       INSERT INTO companies (name, slug, website, industry, description, size_range, status)
-      VALUES (${name}, ${slug}, ${body.website || ""}, ${body.industry || "General"}, ${body.description || ""}, ${body.size_range || "11-50"}, 'approved')
+      VALUES (${name}, ${slug}, ${body.website || ""}, ${body.industry || "General"}, ${body.description || ""}, ${body.size_range || "11-50"}, 'pending')
       RETURNING *
     `;
     await sql.end();
-    return c.json({ success: true, message: "Company registered successfully.", data: inserted[0] });
+    return c.json({ success: true, message: "Company registered and awaiting admin approval.", data: inserted[0] });
   } catch (err: any) {
     return c.json({ success: false, error: { code: 500, message: "Failed to register company" } }, 500);
   }

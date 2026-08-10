@@ -588,6 +588,8 @@ export function CompaniesView({ live }: { live: AdminLive }) {
                 detail?.is_verified || detail?.verified_badge ? "Yes" : "No",
             },
             { label: "Website", value: detail?.website },
+            { label: "GST number", value: detail?.gst_number },
+            { label: "CIN number", value: detail?.cin_number },
             { label: "Headquarters", value: detail?.headquarters },
             { label: "Size", value: detail?.size_range },
             { label: "Founded", value: detail?.founded_year },

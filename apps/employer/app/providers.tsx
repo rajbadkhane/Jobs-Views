@@ -7,7 +7,7 @@ import { useEffect, useMemo } from "react";
 import { appConfig, navigation } from "@career-os/config";
 import { useAuthStore, useThemeStore } from "@career-os/shared";
 import { useRoleGuard } from "@career-os/hooks";
-import { UniversalCommandCenter } from "@career-os/ui";
+import { ToastViewport, UniversalCommandCenter } from "@career-os/ui";
 import { ProductionRuntime } from "./production-runtime";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -42,6 +42,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={client}>
       <RoleGuard />
       <ProductionRuntime />
+      <ToastViewport />
       <UniversalCommandCenter nav={navigation.employer} role="employer" />
       {children}
     </QueryClientProvider>

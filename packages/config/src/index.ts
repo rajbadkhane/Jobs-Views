@@ -4,6 +4,7 @@ export const appConfig = {
   employerUrl: process.env.NEXT_PUBLIC_EMPLOYER_URL ?? "http://localhost:3002",
   adminUrl: process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001",
   razorpayKeyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "",
+  googleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "",
   brand: {
     name: "Jobs View",
     tagline: "YOUR CAREER. OUR MISSION.",
@@ -33,7 +34,7 @@ export const appConfig = {
   ],
   uploadMaxBytes: Number(process.env.NEXT_PUBLIC_UPLOAD_MAX_BYTES ?? 10_485_760),
   analytics: {
-    gaMeasurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "",
+    gaMeasurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "G-GPLY4MG6PV",
     gtmId: process.env.NEXT_PUBLIC_GTM_ID ?? "",
     clarityId: process.env.NEXT_PUBLIC_CLARITY_ID ?? ""
   },

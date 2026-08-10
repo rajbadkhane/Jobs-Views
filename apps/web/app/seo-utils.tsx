@@ -76,3 +76,49 @@ export function StructuredSeoPage({ title, description, children, schemas }: { t
     </main>
   );
 }
+
+export type ParsedSeoSlug = { role?: string; location?: string; category?: string; isValid: boolean; title: string; description: string };
+
+export function parseSeoSlug(slug: string): ParsedSeoSlug {
+  const decoded = decodeURIComponent(slug).toLowerCase();
+  
+  const parsed: ParsedSeoSlug = { isValid: false, title: "Jobs", description: "Search the latest jobs" };
+
+  if (decoded.endsWith("-jobs")) {
+    const roleOrCat = decoded.replace("-jobs", "");
+    parsed.role = titleCaseSlug(roleOrCat);
+    parsed.isValid = true;
+    parsed.title = `${parsed.role} Jobs`;
+    parsed.description = `Find the best ${parsed.role} jobs. Apply today and advance your career.`;
+  } else if (decoded.startsWith("jobs-in-")) {
+    const location = decoded.replace("jobs-in-", "");
+    parsed.location = titleCaseSlug(location);
+    parsed.isValid = true;
+    parsed.title = `Jobs in ${parsed.location}`;
+    parsed.description = `Explore the latest jobs and career opportunities in ${parsed.location}.`;
+  } else if (decoded.includes("-jobs-in-")) {
+    const parts = decoded.split("-jobs-in-");
+    if (parts.length === 2) {
+      parsed.role = titleCaseSlug(parts[0]);
+      parsed.location = titleCaseSlug(parts[1]);
+      parsed.isValid = true;
+      parsed.title = `${parsed.role} Jobs in ${parsed.location}`;
+      parsed.description = `Search and apply for ${parsed.role} jobs in ${parsed.location}. Top companies are hiring.`;
+    }
+  }
+
+  return parsed;
+}
+
+export function itemListSchema(title: string, path: string, items: Array<{ name: string; url: string }>) {
+  return jsonLd("ItemList", {
+    name: title,
+    url: new URL(path, appConfig.siteUrl).toString(),
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      url: new URL(item.url, appConfig.siteUrl).toString()
+    }))
+  });
+}

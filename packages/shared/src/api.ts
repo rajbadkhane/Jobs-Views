@@ -220,6 +220,7 @@ export const authApi = {
   register: (payload: { email: string; password: string; role: "EMPLOYER" | "JOB_SEEKER"; first_name?: string; last_name?: string; mobile?: string; company_name?: string; website?: string; gst_number?: string; cin_number?: string }) =>
     request<AuthResult>(api, { method: "POST", url: "/auth/register", data: payload }),
   login: (payload: { email: string; password: string }) => request<AuthResult>(api, { method: "POST", url: "/auth/login", data: payload }),
+  googleCallback: (payload: { code: string; redirect_uri: string }) => request<AuthResult>(api, { method: "POST", url: "/auth/google-callback", data: payload }),
   logout: () => request<null>(api, { method: "POST", url: "/auth/logout" }),
   logoutAll: () => request<null>(api, { method: "POST", url: "/auth/logout-all" }),
   refresh: () => request<AuthResult>(api, { method: "POST", url: "/auth/refresh" }),

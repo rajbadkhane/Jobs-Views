@@ -236,6 +236,24 @@ export function useAuthActions() {
     }
   });
 
+  const googleAuth = useMutation({
+    mutationFn: authApi.googleCallback,
+    onSuccess: (result) => {
+      setSession(
+        {
+          id: result.user.id,
+          email: result.user.email,
+          role: result.user.role,
+          permissions: result.user.permissions ?? [],
+          isVerified: result.user.is_verified
+        },
+        { accessToken: result.access_token, refreshToken: result.refresh_token }
+      );
+      notify({ title: "Welcome", description: "Successfully authenticated with Google.", intent: "success" });
+      if (typeof window !== "undefined") window.location.href = authDestination(result.user.role);
+    }
+  });
+
   const register = useMutation({
     mutationFn: authApi.register,
     onSuccess: (result) => {
@@ -273,6 +291,7 @@ export function useAuthActions() {
 
   return {
     login,
+    googleAuth,
     register,
     logout,
     logoutAll,

@@ -14,6 +14,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
   for (const company of companies) entries.push(entry(`/companies/${company.slug}`, new Date(company.updated_at || now), 0.8));
   for (const path of listPublishedContent().map(contentPath)) entries.push(entry(path, now, 0.7));
+
+  // Programmatic SEO Pages
+  const roles = [
+    "iti", "nursing", "react-developer", "frontend-developer", "backend-developer", "data-scientist", "sales",
+    "driver", "delivery-boy", "backoffice", "data-entry", "security-guard", "receptionist", "telecaller", "customer-support"
+  ];
+  const locations = ["bhopal", "bengaluru", "hyderabad", "pune", "mumbai", "delhi", "remote", "india"];
+  
+  for (const role of roles) {
+    entries.push(entry(`/jobs/${role}-jobs`, now, 0.9));
+    for (const location of locations) {
+      entries.push(entry(`/jobs/${role}-jobs-in-${location}`, now, 0.8));
+    }
+  }
+  for (const location of locations) {
+    entries.push(entry(`/jobs/jobs-in-${location}`, now, 0.9));
+  }
+
   return Array.from(new Map(entries.map((item) => [item.url, item])).values());
 }
 

@@ -336,6 +336,160 @@ authRouter.post("/login", async (c) => {
   }
 });
 
+authRouter.post("/google-callback", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const code = body.code;
+    const redirectUri = body.redirect_uri;
+    const userAgent = c.req.header("user-agent") || "Cloudflare-Edge-Client";
+    const ip = c.req.header("cf-connecting-ip") || c.req.header("x-forwarded-for") || "";
+
+    if (!code || !redirectUri) {
+      return c.json({ success: false, error: { code: 400, message: "Authorization code and redirect URI are required." } }, 400);
+    }
+    
+    if (!c.env.GOOGLE_CLIENT_ID || !c.env.GOOGLE_CLIENT_SECRET) {
+      return c.json({ success: false, error: { code: 500, message: "Google Auth is not configured on the server." } }, 500);
+    }
+
+    // 1. Exchange code for tokens
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: c.env.GOOGLE_CLIENT_ID,
+        client_secret: c.env.GOOGLE_CLIENT_SECRET,
+        code,
+        grant_type: "authorization_code",
+        redirect_uri: redirectUri
+      }).toString()
+    });
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      console.error("[Google OAuth Error]:", errorText);
+      return c.json({ success: false, error: { code: 401, message: "Failed to verify Google authorization code." } }, 401);
+    }
+
+    const tokenData = (await tokenResponse.json()) as any;
+    const idToken = tokenData.id_token;
+    
+    if (!idToken) {
+      return c.json({ success: false, error: { code: 401, message: "No identity token returned from Google." } }, 401);
+    }
+
+    // 2. Decode ID token payload (since we just fetched it directly from Google via HTTPS, it's safe to trust the decode)
+    const payloadBase64 = idToken.split(".")[1];
+    const decodedPayload = JSON.parse(atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/")));
+    const email = decodedPayload.email?.toLowerCase().trim();
+    const firstName = decodedPayload.given_name || "Google";
+    const lastName = decodedPayload.family_name || "User";
+    const picture = decodedPayload.picture;
+
+    if (!email) {
+      return c.json({ success: false, error: { code: 400, message: "Email not provided by Google." } }, 400);
+    }
+
+    const sql = getDb(c.env);
+    
+    let userId: string;
+    let userRole = "JOB_SEEKER";
+    let permissions: string[] = ["*"];
+    
+    // 3. Find or Create User
+    const existingUsers = await sql`
+      SELECT u.id, u.email, u.is_active, r.name as role
+      FROM users u
+      LEFT JOIN user_roles ur ON ur.user_id = u.id
+      LEFT JOIN roles r ON r.id = ur.role_id
+      WHERE u.email = ${email} AND u.deleted_at IS NULL
+      LIMIT 1
+    `;
+
+    if (existingUsers.length > 0) {
+      const user = existingUsers[0];
+      if (!user.is_active) {
+        await sql.end();
+        return c.json({ success: false, error: { code: 403, message: "This account is inactive or disabled." } }, 403);
+      }
+      userId = user.id;
+      userRole = user.role || "JOB_SEEKER";
+      
+      // Auto-verify if they weren't already
+      await sql`UPDATE users SET is_verified = true, email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = ${userId}`;
+      
+    } else {
+      // Create new account
+      const randomPassword = crypto.randomUUID() + crypto.randomUUID();
+      const passwordHash = await bcrypt.hash(randomPassword, 10);
+      
+      await sql.begin(async (tx: any) => {
+        const newUser = await tx`
+          INSERT INTO users (email, password_hash, is_active, is_verified, email_verified_at)
+          VALUES (${email}, ${passwordHash}, true, true, NOW())
+          RETURNING id
+        `;
+        userId = newUser[0].id;
+        
+        const roles = await tx`SELECT id FROM roles WHERE name = 'JOB_SEEKER' LIMIT 1`;
+        const roleId = roles.length > 0 ? roles[0].id : 4;
+        await tx`INSERT INTO user_roles (user_id, role_id) VALUES (${userId}, ${roleId})`;
+        
+        await tx`INSERT INTO candidate_profiles (user_id, first_name, last_name, avatar_url) VALUES (${userId}, ${firstName}, ${lastName}, ${picture || null})`.catch(() => {});
+      });
+    }
+
+    // 4. Get permissions
+    if (userRole !== "SUPER_ADMIN") {
+      const permRows = await sql`
+        SELECT p.name FROM permissions p
+        JOIN role_permissions rp ON rp.permission_id = p.id
+        JOIN roles r ON r.id = rp.role_id
+        WHERE r.name = ${userRole}
+      `;
+      permissions = permRows.map((row: any) => row.name);
+    }
+
+    // 5. Issue Tokens
+    const SESSION_TTL_SECONDS = 72 * 3600;
+    const accessToken = await generateToken({ id: userId!, email, role: userRole, permissions }, c.env.JWT_ACCESS_SECRET || DEFAULT_SECRET, SESSION_TTL_SECONDS);
+    const refreshToken = crypto.randomUUID() + crypto.randomUUID();
+    const tokenHash = await hashToken(refreshToken);
+    const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+
+    await sql.begin(async (tx: any) => {
+      await tx`
+        INSERT INTO user_sessions (user_id, refresh_token_hash, user_agent, ip_address, expires_at)
+        VALUES (${userId}, ${tokenHash}, ${userAgent}, NULLIF(${ip}, '')::inet, ${expiresAt})
+      `;
+      await tx`
+        UPDATE user_sessions SET revoked_at = NOW()
+        WHERE user_id = ${userId} AND revoked_at IS NULL AND id NOT IN (
+          SELECT id FROM user_sessions WHERE user_id = ${userId} AND revoked_at IS NULL AND expires_at > NOW() ORDER BY created_at DESC LIMIT 5
+        )
+      `;
+    });
+
+    await sql`INSERT INTO login_history (user_id, email, ip_address, user_agent, success, reason) VALUES (${userId!}, ${email}, NULLIF(${ip}, '')::inet, ${userAgent}, true, 'google_oauth')`.catch(() => {});
+    await sql`INSERT INTO user_devices (user_id, user_agent, ip_address) VALUES (${userId!}, ${userAgent}, NULLIF(${ip}, '')::inet)`.catch(() => {});
+    await sql.end();
+
+    return c.json({
+      success: true,
+      data: {
+        user: { id: userId!, email, role: userRole, is_verified: true, permissions },
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_at: new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString(),
+      },
+    });
+
+  } catch (error: any) {
+    console.error("[Google OAuth Error]:", error);
+    return c.json({ success: false, error: { code: 500, message: "Internal Authentication Error via Google", details: error.message } }, 500);
+  }
+});
+
 authRouter.post("/refresh", async (c) => {
   try {
     const body = await c.req.json().catch(() => ({}));

@@ -6,7 +6,8 @@ import { appConfig } from "@career-os/config";
 import { jobPostingSchema, jobsApi, type PublicJob } from "@career-os/shared";
 
 import { JobDetailExperience } from "../../components/job-detail-experience";
-import { seoPageMetadata, seoSchemas } from "../../seo-utils";
+import { JobSearchExperience } from "../../components/job-search-experience";
+import { parseSeoSlug, seoPageMetadata, seoSchemas, itemListSchema } from "../../seo-utils";
 
 type Props = { params: { slug: string } };
 type JobLoadResult =
@@ -26,6 +27,10 @@ const loadJob = cache(async (slug: string): Promise<JobLoadResult> => {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const result = await loadJob(params.slug);
   if (result.status === "not-found") {
+    const seo = parseSeoSlug(params.slug);
+    if (seo.isValid) {
+      return seoPageMetadata(seo.title, seo.description, `/jobs/${params.slug}`);
+    }
     return { title: "Job Not Found | Jobs View", robots: { index: false, follow: false } };
   }
   if (result.status === "error") {
@@ -47,7 +52,45 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function Page({ params }: Props) {
   const result = await loadJob(params.slug);
-  if (result.status === "not-found") notFound();
+  
+  if (result.status === "not-found") {
+    const seo = parseSeoSlug(params.slug);
+    if (seo.isValid) {
+      // It's a programmatic SEO page
+      let jobLinks: { name: string; url: string }[] = [];
+      try {
+        const keywordParts = [seo.role, seo.category].filter(Boolean);
+        const searchResults = await jobsApi.search({
+          limit: 10,
+          q: keywordParts.join(" ") || undefined,
+          city: seo.location,
+          sort: "latest"
+        });
+        
+        // Extract array if it's wrapped in { data: [] } or { items: [] }
+        const jobsList = Array.isArray(searchResults) ? searchResults : (searchResults as any).data || (searchResults as any).items || [];
+        
+        jobLinks = jobsList.map((job: any) => ({
+          name: job.title,
+          url: `/jobs/${job.slug || job.id}`
+        }));
+      } catch (e) {
+        // Silently fail search if API is down, but still render the SEO page
+      }
+
+      const schemas = [
+        ...seoSchemas("CollectionPage", seo.title, `/jobs/${params.slug}`, seo.description),
+        itemListSchema(seo.title, `/jobs/${params.slug}`, jobLinks) 
+      ];
+      return (
+        <>
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemas) }} />
+          <JobSearchExperience />
+        </>
+      );
+    }
+    notFound();
+  }
 
   const job = result.status === "success" ? result.job : undefined;
   const schemas = job

@@ -444,7 +444,27 @@ function SocialLogin() {
         <span className="h-px flex-1 bg-[var(--cos-outline-variant)]" />
       </div>
       <div className="grid gap-3 grid-cols-3">
-        <Button type="button" variant="outline" className="w-full flex justify-center py-2 px-1">
+        <Button 
+          type="button" 
+          variant="outline" 
+          className="w-full flex justify-center py-2 px-1"
+          onClick={() => {
+            if (!appConfig.googleClientId) {
+              alert("Google Auth is not configured (missing NEXT_PUBLIC_GOOGLE_CLIENT_ID).");
+              return;
+            }
+            const redirectUri = `${window.location.origin}/api/auth/callback/google`;
+            const params = new URLSearchParams({
+              client_id: appConfig.googleClientId,
+              redirect_uri: redirectUri,
+              response_type: "code",
+              scope: "email profile",
+              access_type: "offline",
+              prompt: "consent"
+            });
+            window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+          }}
+        >
           <GoogleLogo />
           <span className="hidden sm:inline ml-1.5 text-xs">Google</span>
         </Button>

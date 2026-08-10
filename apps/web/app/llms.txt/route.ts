@@ -14,7 +14,10 @@ Jobs View helps candidates discover verified jobs, understand salaries, build ca
 ## Public content
 - Homepage: ${appConfig.siteUrl}/
 - Job search: ${appConfig.siteUrl}/jobs
-- Programmatic job pages: ${appConfig.siteUrl}/jobs/{role-city}
+- Programmatic SEO Job Pages (Faceted):
+  - By Location: ${appConfig.siteUrl}/jobs/jobs-in-{location} (e.g. jobs-in-bhopal, jobs-in-india)
+  - By Role/Category: ${appConfig.siteUrl}/jobs/{role}-jobs (e.g. iti-jobs, nursing-jobs)
+  - By Role & Location: ${appConfig.siteUrl}/jobs/{role}-jobs-in-{location}
 - Company directory: ${appConfig.siteUrl}/companies
 - Company profiles: ${appConfig.siteUrl}/companies/{slug}
 - Salary pages: ${appConfig.siteUrl}/salary/{role}

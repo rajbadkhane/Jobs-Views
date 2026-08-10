@@ -22,9 +22,18 @@ export function LanguageSwitcher() {
     }
   }, []);
 
+  const cookieDomains = () => {
+    const host = window.location.hostname;
+    const apex = host.replace(/^www\./, "");
+    // Google's own widget can write the googtrans cookie under any of these
+    // domain forms depending on how translation was last triggered (our code,
+    // or a user driving the native picker directly), so every clear/set must
+    // hit all of them or a stale cookie on another domain form keeps winning.
+    return Array.from(new Set([host, "." + host, apex, "." + apex]));
+  };
+
   const toggleLanguage = () => {
     const nextLang = currentLang === "en" ? "hi" : "en";
-    const host = window.location.hostname;
 
     // The in-page "flip the hidden <select> and fire a change event" trick is
     // unreliable across Google's widget versions/browsers. Setting the
@@ -33,11 +42,15 @@ export function LanguageSwitcher() {
     if (nextLang === "hi") {
       const value = "googtrans=/en/hi; path=/; max-age=" + 60 * 60 * 24 * 365;
       document.cookie = value;
-      document.cookie = value + "; domain=" + host;
+      cookieDomains().forEach((domain) => {
+        document.cookie = value + "; domain=" + domain;
+      });
     } else {
       const expired = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
       document.cookie = expired;
-      document.cookie = expired + "; domain=" + host;
+      cookieDomains().forEach((domain) => {
+        document.cookie = expired + "; domain=" + domain;
+      });
     }
     window.location.reload();
   };

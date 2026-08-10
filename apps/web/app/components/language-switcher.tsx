@@ -24,21 +24,25 @@ export function LanguageSwitcher() {
 
   const toggleLanguage = () => {
     const nextLang = currentLang === "en" ? "hi" : "en";
+    setCurrentLang(nextLang);
     
-    // Set the cookie for google translate
-    if (nextLang === "hi") {
-      document.cookie = "googtrans=/en/hi; path=/; domain=" + window.location.hostname;
-      document.cookie = "googtrans=/en/hi; path=/;";
+    // Try to trigger the Google Translate dropdown instantly without reload
+    const selectField = document.querySelector(".goog-te-combo") as HTMLSelectElement | null;
+    if (selectField) {
+      selectField.value = nextLang === "en" ? "en" : "hi";
+      selectField.dispatchEvent(new Event("change"));
     } else {
-      document.cookie = "googtrans=/en/en; path=/; domain=" + window.location.hostname;
-      document.cookie = "googtrans=/en/en; path=/;";
-      // Ensure English restores by deleting translation cookies
-      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + window.location.hostname;
+      // Fallback: set the cookie and reload
+      if (nextLang === "hi") {
+        document.cookie = "googtrans=/en/hi; path=/; domain=" + window.location.hostname;
+        document.cookie = "googtrans=/en/hi; path=/;";
+      } else {
+        document.cookie = "googtrans=/en/en; path=/; domain=" + window.location.hostname;
+        document.cookie = "googtrans=/en/en; path=/;";
+        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      }
+      window.location.reload();
     }
-    
-    // Reload to apply translation over the whole DOM cleanly
-    window.location.reload();
   };
 
   return (
@@ -50,7 +54,7 @@ export function LanguageSwitcher() {
       />
       <Script id="google-translate-init" strategy="afterInteractive">
         {`
-          function googleTranslateElementInit() {
+          window.googleTranslateElementInit = function() {
             new window.google.translate.TranslateElement({
               pageLanguage: 'en',
               includedLanguages: 'en,hi',

@@ -40,6 +40,7 @@ import {
   profileApi,
   roleHome,
   subscriptionApi,
+  supportApi,
   userApi,
   useAuthStore,
   useNotificationStore
@@ -176,6 +177,15 @@ export function useCandidatePlans() {
 
 export function useCandidateSubscription(enabled = true) {
   return useQuery({ queryKey: queryKeys.candidateSubscription, queryFn: subscriptionApi.me, enabled, retry: false });
+}
+
+export function useSupportTicket() {
+  const notify = useNotificationStore((state) => state.notify);
+  return useMutation({
+    mutationFn: supportApi.createTicket,
+    onSuccess: () => notify({ title: "Ticket submitted", description: "Our team will follow up by email.", intent: "success" }),
+    onError: (error) => notify({ title: "Could not submit ticket", description: apiErrorMessage(error), intent: "error" })
+  });
 }
 
 export function useSubscriptionActions() {
@@ -535,6 +545,7 @@ export function useAdminActions() {
     upsertSetting: useMutation({ mutationFn: adminApi.upsertSetting, onSuccess: async () => { await refreshAdmin(); completed("Platform settings were saved."); }, onError: failed }),
     createReport: useMutation({ mutationFn: adminApi.createReport, onSuccess: async () => { await refreshAdmin(); completed("The report request was created."); }, onError: failed }),
     createTicket: useMutation({ mutationFn: adminApi.createTicket, onSuccess: async () => { await refreshAdmin(); completed("The support ticket was created."); }, onError: failed }),
+    updateTicket: useMutation({ mutationFn: ({ id, status }: { id: string; status: string }) => adminApi.updateTicket(id, status), onSuccess: async () => { await refreshAdmin(); completed("The ticket status was updated."); }, onError: failed }),
     upsertSeo: useMutation({ mutationFn: adminApi.upsertSeo, onSuccess: async () => { await refreshAdmin(); completed("SEO configuration was saved."); }, onError: failed })
   };
 }

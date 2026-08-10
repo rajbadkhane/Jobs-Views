@@ -263,25 +263,51 @@ adminRouter.get("/audit-logs", async (c) => {
 });
 
 adminRouter.get("/support/tickets", async (c) => {
-  return c.json({
-    success: true,
-    data: {
-      items: [
-        { id: "TKT-1001", user_email: "recruiter@globalhealth.in", subject: "Inquiry on unlimited job posting benefits", status: "open", created_at: new Date().toISOString() },
-      ],
-      total: 1,
-    },
-  });
+  try {
+    const sql = getDb(c.env);
+    const items = await sql`SELECT * FROM support_tickets ORDER BY created_at DESC LIMIT 100`;
+    await sql.end();
+    return c.json({ success: true, data: { items, total: items.length } });
+  } catch (err: any) {
+    return c.json({ success: false, error: { code: 500, message: "Support ticket query failed", details: err.message } }, 500);
+  }
 });
 
 adminRouter.post("/support/tickets", async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  return c.json({ success: true, message: "Support ticket registered.", data: { id: "TKT-" + Date.now(), status: "open", ...body } });
+  const email = (body.email || "").toString().trim();
+  const subject = (body.subject || "").toString().trim();
+  const message = (body.message || "").toString().trim();
+  if (!email || !subject || !message) {
+    return c.json({ success: false, error: { code: 400, message: "Email, subject, and message are required." } }, 400);
+  }
+  try {
+    const sql = getDb(c.env);
+    const ticketType = ["ticket", "feedback", "contact", "bug", "feature"].includes(body.ticket_type) ? body.ticket_type : "ticket";
+    const priority = ["low", "normal", "high", "urgent"].includes(body.priority) ? body.priority : "normal";
+    const inserted = await sql`
+      INSERT INTO support_tickets (email, ticket_type, subject, message, priority)
+      VALUES (${email}, ${ticketType}, ${subject}, ${message}, ${priority})
+      RETURNING *
+    `;
+    await sql.end();
+    return c.json({ success: true, message: "Support ticket registered.", data: inserted[0] });
+  } catch (err: any) {
+    return c.json({ success: false, error: { code: 500, message: "Failed to create support ticket", details: err.message } }, 500);
+  }
 });
 
 adminRouter.patch("/support/tickets/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json().catch(() => ({}));
-  return c.json({ success: true, message: `Ticket ${id} marked as ${body.status || "closed"}.` });
+  const status = ["open", "pending", "resolved", "closed"].includes(body.status) ? body.status : "closed";
+  try {
+    const sql = getDb(c.env);
+    await sql`UPDATE support_tickets SET status = ${status}, updated_at = NOW() WHERE id = ${id}`;
+    await sql.end();
+    return c.json({ success: true, message: `Ticket marked as ${status}.` });
+  } catch (err: any) {
+    return c.json({ success: false, error: { code: 500, message: "Failed to update ticket" } }, 500);
+  }
 });
 

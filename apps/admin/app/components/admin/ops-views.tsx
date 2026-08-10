@@ -8,7 +8,7 @@ import { Button } from "@career-os/ui";
 
 import type { AdminLive, ReportItem, TicketItem } from "../admin-portal";
 import { AdminColumn, AdminDataTable } from "../admin-data-table";
-import { PublicLink } from "../admin-overlays";
+import { AdminDrawer, DetailList, PublicLink } from "../admin-overlays";
 
 import { FormCard, Select, StatusBadge, TextArea, TextField } from "./shared";
 import { formatDate, items, timestamp, titleCase } from "./utils";
@@ -214,6 +214,7 @@ function SupportForm({
 }
 export function SupportView({ live }: { live: AdminLive }) {
   const tickets = items<TicketItem>(live.data.tickets.data);
+  const [detail, setDetail] = useState<TicketItem>();
   const columns: AdminColumn<TicketItem>[] = [
     {
       id: "subject",
@@ -263,9 +264,53 @@ export function SupportView({ live }: { live: AdminLive }) {
         rows={tickets}
         columns={columns}
         rowKey={(row) => row.id || `${row.subject}-${row.created_at}`}
+        onOpen={setDetail}
         emptyTitle="No support tickets"
         emptyDescription="New support requests will appear here."
       />
+      <AdminDrawer
+        open={Boolean(detail)}
+        title={detail?.subject || "Ticket details"}
+        description={detail?.email}
+        onClose={() => setDetail(undefined)}
+      >
+        <DetailList
+          items={[
+            { label: "Type", value: detail?.ticket_type ? titleCase(detail.ticket_type) : undefined },
+            { label: "Priority", value: detail?.priority ? titleCase(detail.priority) : undefined },
+            { label: "Status", value: detail?.status ? titleCase(detail.status) : undefined },
+            { label: "Created", value: formatDate(detail?.created_at) },
+          ]}
+        />
+        {detail?.message ? (
+          <p className="mt-5 whitespace-pre-line text-sm leading-6 text-[var(--cos-on-surface-variant)]">{detail.message}</p>
+        ) : null}
+        <div className="mt-5 flex flex-wrap gap-2">
+          {detail ? (
+            <>
+              <Button
+                loading={live.actions.updateTicket.isPending}
+                disabled={live.actions.updateTicket.isPending}
+                onClick={() => detail.id && live.actions.updateTicket.mutate({ id: detail.id, status: "resolved" })}
+              >
+                Mark resolved
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => detail.id && live.actions.updateTicket.mutate({ id: detail.id, status: "pending" })}
+              >
+                Mark pending
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => detail.id && live.actions.updateTicket.mutate({ id: detail.id, status: "closed" })}
+              >
+                Close
+              </Button>
+            </>
+          ) : null}
+        </div>
+      </AdminDrawer>
     </div>
   );
 }

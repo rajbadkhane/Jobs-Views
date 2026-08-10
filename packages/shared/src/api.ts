@@ -382,6 +382,7 @@ export const adminApi = {
   createReport: (payload: Record<string, unknown>) => request<unknown>(api, { method: "POST", url: "/admin/reports", data: payload }),
   tickets: (query?: QueryParams) => request<unknown[]>(api, { method: "GET", url: "/admin/support/tickets", params: params(query) }),
   createTicket: (payload: Record<string, unknown>) => request<unknown>(api, { method: "POST", url: "/admin/support/tickets", data: payload }),
+  updateTicket: (id: string, status: string) => request<unknown>(api, { method: "PATCH", url: `/admin/support/tickets/${id}`, data: { status } }),
   seoTemplates: () => request<unknown[]>(api, { method: "GET", url: "/admin/seo/templates" }),
   upsertSeo: (payload: Record<string, unknown>) => request<unknown>(api, { method: "POST", url: "/admin/seo/templates", data: payload }),
   systemHealth: () => request<unknown>(api, { method: "GET", url: "/admin/system-health" }),
@@ -452,6 +453,11 @@ export const contentApi = {
   bySlug: (type: string, slug: string) => request<unknown>(api, { method: "GET", url: `/content/${type}/${slug}` }),
   advertisements: (placement = "homepage_hero") =>
     request<{ items: Advertisement[] }>(api, { method: "GET", url: "/content/advertisements", params: { placement } })
+};
+
+export const supportApi = {
+  createTicket: (payload: { email: string; subject: string; message: string; ticket_type?: string }) =>
+    request<{ id: string; status: string; created_at: string }>(api, { method: "POST", url: "/support/tickets", data: payload })
 };
 
 export const healthApi = {

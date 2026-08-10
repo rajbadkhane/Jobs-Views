@@ -13,6 +13,7 @@ import { subscriptionsRouter, checkoutRouter } from "./handlers/subscriptions_ha
 import { contentRouter } from "./handlers/content_handler";
 import { advertisementsRouter, publicAdvertisementsRouter } from "./handlers/advertisements_handler";
 import { healthRouter } from "./handlers/health_handler";
+import { supportRouter } from "./handlers/support_handler";
 
 export const app = new Hono<AppEnv>();
 
@@ -100,6 +101,10 @@ app.route("/api/v1/admin", adminRouter);
 app.route("/admin", adminRouter);
 app.route("/api/v1/admin/advertisements", advertisementsRouter);
 app.route("/admin/advertisements", advertisementsRouter);
+
+// 8b. Public support ticket intake
+app.route("/api/v1/support", supportRouter);
+app.route("/support", supportRouter);
 
 // 9. Subscriptions & Razorpay Checkout
 app.route("/api/v1/subscriptions", subscriptionsRouter);

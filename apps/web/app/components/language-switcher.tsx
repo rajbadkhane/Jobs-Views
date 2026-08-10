@@ -24,25 +24,22 @@ export function LanguageSwitcher() {
 
   const toggleLanguage = () => {
     const nextLang = currentLang === "en" ? "hi" : "en";
-    setCurrentLang(nextLang);
-    
-    // Try to trigger the Google Translate dropdown instantly without reload
-    const selectField = document.querySelector(".goog-te-combo") as HTMLSelectElement | null;
-    if (selectField) {
-      selectField.value = nextLang === "en" ? "en" : "hi";
-      selectField.dispatchEvent(new Event("change", { bubbles: true }));
+    const host = window.location.hostname;
+
+    // The in-page "flip the hidden <select> and fire a change event" trick is
+    // unreliable across Google's widget versions/browsers. Setting the
+    // googtrans cookie and reloading is the mechanism Google's own script
+    // actually reads on page load, so it's what reliably drives translation.
+    if (nextLang === "hi") {
+      const value = "googtrans=/en/hi; path=/; max-age=" + 60 * 60 * 24 * 365;
+      document.cookie = value;
+      document.cookie = value + "; domain=" + host;
     } else {
-      // Fallback: set the cookie and reload
-      if (nextLang === "hi") {
-        document.cookie = "googtrans=/en/hi; path=/; domain=" + window.location.hostname;
-        document.cookie = "googtrans=/en/hi; path=/;";
-      } else {
-        document.cookie = "googtrans=/en/en; path=/; domain=" + window.location.hostname;
-        document.cookie = "googtrans=/en/en; path=/;";
-        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      }
-      window.location.reload();
+      const expired = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
+      document.cookie = expired;
+      document.cookie = expired + "; domain=" + host;
     }
+    window.location.reload();
   };
 
   return (

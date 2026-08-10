@@ -4,7 +4,7 @@ export const appConfig = {
   employerUrl: process.env.NEXT_PUBLIC_EMPLOYER_URL ?? "http://localhost:3002",
   adminUrl: process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001",
   razorpayKeyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "",
-  googleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "",
+  googleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "1099102420487-teku2gmdsaohueairi1l53mlij47ner8.apps.googleusercontent.com",
   brand: {
     name: "Jobs View",
     tagline: "YOUR CAREER. OUR MISSION.",

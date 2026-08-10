@@ -44,7 +44,8 @@ export function LanguageSwitcher() {
 
   return (
     <>
-      <div id="google_translate_element" className="hidden" aria-hidden="true" />
+      {/* TEMP DEBUG: visible so we can test Google's own dropdown directly, bypassing our custom trigger logic. Re-hide once translation is confirmed working. */}
+      <div id="google_translate_element" />
       <Script
         src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
         strategy="afterInteractive"

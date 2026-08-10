@@ -38,11 +38,11 @@ const nextConfig = {
         key: "Content-Security-Policy",
         value: [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://checkout.razorpay.com https://translate.google.com https://translate.googleapis.com https://www.gstatic.com",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://checkout.razorpay.com https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com https://www.gstatic.com",
           "style-src 'self' 'unsafe-inline' https://www.gstatic.com https://fonts.googleapis.com",
           "img-src 'self' data: blob: https:",
           "font-src 'self' data: https://www.gstatic.com https://fonts.gstatic.com",
-          `connect-src 'self' ${apiOrigin} ${monitoringOrigin} https://www.google-analytics.com https://www.clarity.ms https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://translate.googleapis.com https://translate.google.com`.trim(),
+          `connect-src 'self' ${apiOrigin} ${monitoringOrigin} https://www.google-analytics.com https://www.clarity.ms https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://translate.googleapis.com https://translate.google.com https://translate-pa.googleapis.com`.trim(),
           "frame-src https://api.razorpay.com https://checkout.razorpay.com https://translate.google.com",
           "frame-ancestors 'self'",
           "base-uri 'self'",

@@ -214,7 +214,7 @@ jobsRouter.patch("/:id", authenticate(), async (c) => {
   const body = await c.req.json().catch(() => ({}));
   try {
     const sql = getDb(c.env);
-    await sql`
+    const updated = await sql`
       UPDATE jobs SET
         title = COALESCE(${body.title ?? null}, title),
         status = COALESCE(${body.status ?? null}, status),
@@ -231,23 +231,35 @@ jobsRouter.patch("/:id", authenticate(), async (c) => {
         openings = COALESCE(${body.openings != null ? Number(body.openings) : null}, openings),
         education = COALESCE(${body.education ?? null}, education),
         updated_at = NOW()
-      WHERE id = ${id}
-    `.catch(() => {});
+      WHERE id = ${id} AND deleted_at IS NULL
+      RETURNING id
+    `;
+    if (updated.length === 0) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 404, message: "Job not found." } }, 404);
+    }
     if (Array.isArray(body.job_types)) {
-      await sql`UPDATE jobs SET job_types_list = ${body.job_types}::jsonb WHERE id = ${id}`.catch(() => {});
+      await sql`UPDATE jobs SET job_types_list = ${body.job_types}::jsonb WHERE id = ${id}`;
     }
     await sql.end();
     return c.json({ success: true, message: "Job updated successfully.", data: { id, ...body } });
   } catch (err: any) {
-    return c.json({ success: false, error: { code: 500, message: "Update job failure" } }, 500);
+    return c.json({ success: false, error: { code: 500, message: "Update job failure", details: err.message } }, 500);
   }
 });
 
 jobsRouter.delete("/:id", authenticate(), async (c) => {
   const id = c.req.param("id") || "";
-  const sql = getDb(c.env);
-  await sql`UPDATE jobs SET deleted_at = NOW(), status = 'archived' WHERE id = ${id}`.catch(() => {});
-  await sql.end();
+  try {
+    const sql = getDb(c.env);
+    const deleted = await sql`UPDATE jobs SET deleted_at = NOW(), status = 'archived' WHERE id = ${id} AND deleted_at IS NULL RETURNING id`;
+    await sql.end();
+    if (deleted.length === 0) {
+      return c.json({ success: false, error: { code: 404, message: "Job not found or already deleted." } }, 404);
+    }
+  } catch (err: any) {
+    return c.json({ success: false, error: { code: 500, message: "Delete job failure", details: err.message } }, 500);
+  }
   return c.json({ success: true, message: "Job archived and removed from public catalog." });
 });
 

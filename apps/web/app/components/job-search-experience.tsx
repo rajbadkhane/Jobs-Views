@@ -105,22 +105,20 @@ const sortOptions: { value: SortValue; label: string }[] = [
   { value: "company", label: "Company A-Z" }
 ];
 
+// Kept to the 5 filters candidates actually use day to day. The rest
+// (notice period, industry, company, skills, work mode, date posted) are
+// niche HR-recruiter filters that just added choices without helping a
+// first-time job seeker - they're still supported via URL params/search,
+// just not shown as a wall of filter sections.
 const filterGroups: { id: string; title: string; key: FilterKey; options: { label: string; value: string }[] }[] = [
-  { id: "category", title: "Categories", key: "category", options: ["Technology", "Government", "Healthcare", "Nursing home care", "Staff nurse", "Doctors", "Work from home", "Finance", "Sales", "Education"].map(valueOption) },
-  { id: "location", title: "Location", key: "location", options: popularLocations.filter((item) => item !== "Remote").map(valueOption) },
-  { id: "notice_period", title: "Notice Period & Availability", key: "notice_period", options: [{ label: "Immediate Joiner", value: "immediate" }, { label: "15 Days", value: "15-days" }, { label: "30 Days", value: "30-days" }, { label: "60+ Days", value: "60-plus-days" }] },
-  { id: "experience", title: "Experience", key: "experience", options: [{ label: "Fresher", value: "0" }, { label: "Experienced (1+ years)", value: "1" }, { label: "Experienced (3+ years)", value: "3" }, { label: "Experienced (5+ years)", value: "5" }, { label: "Experienced (8+ years)", value: "8" }] },
-  { id: "salary", title: "Salary", key: "salary", options: [{ label: "₹3L+", value: "300000" }, { label: "₹6L+", value: "600000" }, { label: "₹10L+", value: "1000000" }, { label: "₹15L+", value: "1500000" }, { label: "₹25L+", value: "2500000" }] },
-  { id: "type", title: "Job Type", key: "type", options: [{ label: "Full time", value: "full-time" }, { label: "Part time", value: "part-time" }, { label: "Contract", value: "contract" }, { label: "Internship", value: "internship" }, { label: "Freelance", value: "freelance" }] },
-  { id: "mode", title: "Work Mode", key: "mode", options: [{ label: "Remote", value: "remote" }, { label: "Hybrid", value: "hybrid" }, { label: "On-site", value: "on_site" }] },
-  { id: "industry", title: "Industry", key: "industry", options: ["SaaS", "Fintech", "Healthcare", "Education", "Government", "Retail"].map(valueOption) },
-  { id: "company", title: "Company", key: "company", options: popularCompanies },
-  { id: "education", title: "Education", key: "education", options: ["10th pass", "12th pass", "Diploma", "Graduate", "Postgraduate"].map(valueOption) },
-  { id: "skills", title: "Skills", key: "skills", options: popularSkills.map(valueOption) },
-  { id: "date", title: "Date Posted", key: "date", options: [{ label: "Past 24 hours", value: "1" }, { label: "Past 3 days", value: "3" }, { label: "Past week", value: "7" }, { label: "Past month", value: "30" }] }
+  { id: "location", title: "Location", key: "location", options: popularLocations.map(valueOption) },
+  { id: "category", title: "Job category", key: "category", options: ["Technology", "Government", "Healthcare", "Nursing home care", "Work from home", "Finance", "Sales"].map(valueOption) },
+  { id: "experience", title: "Experience", key: "experience", options: [{ label: "Fresher", value: "0" }, { label: "1+ years", value: "1" }, { label: "3+ years", value: "3" }, { label: "5+ years", value: "5" }, { label: "8+ years", value: "8" }] },
+  { id: "type", title: "Job type", key: "type", options: [{ label: "Full time", value: "full-time" }, { label: "Part time", value: "part-time" }, { label: "Contract", value: "contract" }, { label: "Internship", value: "internship" }] },
+  { id: "salary", title: "Salary", key: "salary", options: [{ label: "₹3L+", value: "300000" }, { label: "₹6L+", value: "600000" }, { label: "₹10L+", value: "1000000" }, { label: "₹15L+", value: "1500000" }] }
 ];
 
-const defaultExpanded = Object.fromEntries(filterGroups.map((group) => [group.id, ["type", "mode", "notice_period"].includes(group.id)]));
+const defaultExpanded = Object.fromEntries(filterGroups.map((group) => [group.id, ["location", "category"].includes(group.id)]));
 
 function valueOption(label: string) {
   return { label, value: label.toLowerCase().replace(/\s+/g, "-") };
@@ -714,7 +712,7 @@ function FilterSidebar({ filters, updateFilters, clear, compact = false, onApply
 
   return (
     <Card className={cn("sticky top-40 grid gap-3", compact && "static border-0 p-0 shadow-none")}>
-      <div className="flex items-center justify-between gap-3"><div><h2 className="font-semibold">Advanced filters</h2><p className="text-sm text-[var(--cos-on-surface-variant)]">Refine results without leaving the page.</p></div><SlidersHorizontal size={18} className="text-[var(--cos-outline)]" /></div>
+      <div className="flex items-center justify-between gap-3"><div><h2 className="font-semibold">Filters</h2><p className="text-sm text-[var(--cos-on-surface-variant)]">Narrow down your search.</p></div><SlidersHorizontal size={18} className="text-[var(--cos-outline)]" /></div>
       <div className={cn("grid gap-2", compact && "max-h-[58dvh] overflow-y-auto pr-1")}>
         {filterGroups.map((group) => (
           <section key={group.id} className="rounded-[var(--radius-career-button)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-low)]">

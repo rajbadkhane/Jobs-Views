@@ -195,7 +195,7 @@ function Hero({ job, saved, savingJob, onToggleSave, onShare, subscribed, applyi
             <Fact icon={Clock} label="Type" value={job.job_type ? titleCase(job.job_type) : "Not specified"} />
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button size="lg" onClick={onApply} loading={applying} disabled={applying || applied}>{applied ? <CheckCircle2 size={17} /> : <Zap size={17} />} {applied ? "Applied" : subscribed ? "Apply now" : "Unlock application"}</Button>
+            <Button size="lg" onClick={onApply} loading={applying} disabled={applying || applied}>{applied ? <CheckCircle2 size={17} /> : <Zap size={17} />} {applied ? "Applied" : subscribed ? "Apply now" : "Subscribe to apply"}</Button>
             <a href="#job-details"><Button variant="secondary" size="lg">See full details</Button></a>
             <Button variant="outline" size="lg" onClick={onToggleSave} disabled={savingJob} aria-pressed={saved}><Bookmark size={17} className={saved ? "fill-amber-400 text-amber-400" : undefined} /> {saved ? "Saved" : "Save"}</Button>
             <Button variant="outline" size="lg" onClick={onShare}><Share2 size={17} /> Share</Button>
@@ -225,7 +225,7 @@ function StickyActionCard({ job, saved, savingJob, onToggleSave, onShare, subscr
           <h2 className="mt-3 text-xl font-bold">{job.title}</h2>
           <p className="text-sm text-[var(--cos-on-surface-variant)]">{job.company_name}</p>
         </div>
-        <Button size="lg" fullWidth onClick={onApply} loading={applying} disabled={applying || applied}>{applied ? <CheckCircle2 size={17} /> : <Zap size={17} />} {applied ? "Applied" : subscribed ? "Apply now" : "Unlock application"}</Button>
+        <Button size="lg" fullWidth onClick={onApply} loading={applying} disabled={applying || applied}>{applied ? <CheckCircle2 size={17} /> : <Zap size={17} />} {applied ? "Applied" : subscribed ? "Apply now" : "Subscribe to apply"}</Button>
         {!subscribed ? <Button variant="secondary" fullWidth onClick={() => openPlans(job.slug)}>View plans</Button> : null}
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" onClick={onToggleSave} disabled={savingJob} aria-pressed={saved}><Bookmark size={16} className={saved ? "fill-amber-400 text-amber-400" : undefined} /> {saved ? "Saved" : "Save"}</Button>
@@ -369,7 +369,7 @@ function MobileApplyBar({ job, saved, savingJob, onToggleSave, onShare, subscrib
         <span className="text-xs font-semibold text-[var(--cos-on-surface-variant)]">Salary</span>
         <span className="truncate text-right text-sm font-bold text-[var(--cos-on-surface)]">{salary(job)}</span>
       </div>
-      <Button onClick={onApply} loading={applying} disabled={applying || applied}>{applied ? "Applied" : subscribed ? "Apply" : "Unlock"}</Button>
+      <Button onClick={onApply} loading={applying} disabled={applying || applied}>{applied ? "Applied" : subscribed ? "Apply" : "Subscribe"}</Button>
       <Button variant="outline" size="icon" aria-label={saved ? "Remove from saved jobs" : "Save job"} aria-pressed={saved} disabled={savingJob} onClick={onToggleSave}><Bookmark size={16} className={saved ? "fill-amber-400 text-amber-400" : undefined} /></Button>
       <Button variant="outline" size="icon" aria-label="Share job" onClick={onShare}><Share2 size={16} /></Button>
     </div>

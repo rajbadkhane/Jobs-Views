@@ -396,109 +396,103 @@ function DashboardView(context: CandidateContext) {
         ))}
       </section>
 
-      {/* 3. Main Dashboard Content Area */}
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-        {/* Left Column: Active Real Opportunities & Activity */}
-        <div className="grid gap-6 content-start">
-          <EnterpriseCard title="Featured & Matched Opportunities" description="Real-time jobs actively hiring from verified companies and hospitals." icon={<Sparkles size={18} />} actions={<a className={linkClass} href="/jobs">Explore all jobs</a>} disabled={false}>
-            {displayJobs.length ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {displayJobs.slice(0, 6).map((job) => (
-                  <JobCard
-                    key={job.id}
-                    title={job.title || "Opportunity"}
-                    company={job.company_name || "Enterprise Employer"}
-                    location={[job.city, job.state].filter(Boolean).join(", ") || "India / Remote"}
-                    salary={jobSalary(job)}
-                    tags={(job.skills || []).slice(0, 3).map((s) => s.name)}
-                    href={`/jobs/${encodeURIComponent(job.slug || job.id)}`}
-                    actions={
-                      <>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          loading={context.actions.saveJob.isPending}
-                          disabled={context.actions.saveJob.isPending}
-                          onClick={() => context.actions.saveJob.mutate({ job_id: job.id })}
-                        >
-                          <Bookmark size={14} /> Save
-                        </Button>
-                        <Button
-                          size="sm"
-                          loading={context.actions.apply.isPending}
-                          disabled={context.actions.apply.isPending}
-                          onClick={() => context.actions.apply.mutate({ job_id: job.id, source: "dashboard_recommendations" })}
-                        >
-                          Quick Apply
-                        </Button>
-                      </>
-                    }
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={<Briefcase size={18} />}
-                title="Active recruitment jobs available"
-                description="Our verified hospital & tech networks are hiring across India."
-                action={<a className={linkClass} href="/jobs">Browse all job listings</a>}
-              />
-            )}
-            {displayJobs.length > 6 ? (
-              <div className="mt-5 text-center">
-                <a href="/jobs" className={cn(linkClass, "w-full sm:w-auto px-8 py-3 bg-[var(--cos-surface-container-low)] font-bold")}>
-                  View all matching active roles &rarr;
-                </a>
-              </div>
-            ) : null}
-          </EnterpriseCard>
-
-          <EnterpriseCard title="Application & Account Tracker" description="Live status updates from your job applications and recruiter interactions." icon={<Clock3 size={18} />} disabled={false}>
-            {activity.length ? (
-              <div className="divide-y divide-[var(--cos-outline-variant)]">
-                {activity.slice(0, 6).map((item) => (
-                  <div key={item.key} className="flex gap-3 py-3 first:pt-0 last:pb-0">
-                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[var(--cos-primary)]" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold">{item.title}</p>
-                      <p className="mt-0.5 text-sm text-[var(--cos-on-surface-variant)]">{item.description}</p>
-                      <time className="mt-1 block text-xs font-medium text-[var(--cos-on-surface-variant)]">{formatDate(item.at)}</time>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-[var(--radius-career-button)] border border-dashed border-[var(--cos-outline-variant)] p-6 text-center">
-                <p className="font-semibold">No recent application activities yet</p>
-                <p className="mt-1 text-sm text-[var(--cos-on-surface-variant)]">Submit your first application to track recruiter review rounds and offer milestones here.</p>
-                <a href="/jobs" className={cn(linkClass, "mt-4")}>Start applying now</a>
-              </div>
-            )}
-          </EnterpriseCard>
-        </div>
-
-        {/* Right Column: Profile Strength & Market Intelligence Sidebar */}
-        <div className="grid gap-6 content-start">
-          <ProfileCompletionCard candidate={context.candidate} completion={completion} skills={context.skills} education={items(context.data.education.data)} experience={items(context.data.experience.data)} />
-          
-          <EnterpriseCard title="Profile Visibility & Tips" description="Your current visibility setting and general job-search advice." icon={<Building2 size={18} />} disabled={false}>
-            <div className="grid gap-4 text-sm">
-              <div className="rounded-[var(--radius-career-button)] bg-[var(--cos-surface-container-low)] p-3.5">
-                <div className="flex items-center justify-between font-bold">
-                  <span>Resume Visibility</span>
-                  <Badge tone={context.candidate.visibility === "public" ? "success" : "neutral"}>{context.candidate.visibility === "public" ? "Public" : "Private"}</Badge>
-                </div>
-                <p className="mt-1 text-xs text-[var(--cos-on-surface-variant)]">{context.candidate.visibility === "public" ? "Your profile is viewable by employers and recruiters." : "Your profile is private and not visible to employers. Change this in Settings."}</p>
-              </div>
-
-              <div className="border-t border-[var(--cos-outline-variant)] pt-3">
-                <p className="font-bold">Career Upgrade Tip</p>
-                <p className="mt-1 text-xs text-[var(--cos-on-surface-variant)]">A complete profile with skills, experience, and a verified resume gives employers a clearer picture of your candidacy.</p>
-                <a href="/candidate/profile" className={cn(linkClass, "mt-3 w-full text-xs h-9")}>Update profile skills</a>
-              </div>
+      {/* 3. Main Dashboard Content — single column, feed-style */}
+      <div className="grid gap-6">
+        <EnterpriseCard title="Featured & Matched Opportunities" description="Real-time jobs actively hiring from verified companies and hospitals." icon={<Sparkles size={18} />} actions={<a className={linkClass} href="/jobs">Explore all jobs</a>} disabled={false}>
+          {displayJobs.length ? (
+            <div className="grid gap-4">
+              {displayJobs.slice(0, 6).map((job) => (
+                <JobCard
+                  key={job.id}
+                  title={job.title || "Opportunity"}
+                  company={job.company_name || "Enterprise Employer"}
+                  location={[job.city, job.state].filter(Boolean).join(", ") || "India / Remote"}
+                  salary={jobSalary(job)}
+                  tags={(job.skills || []).slice(0, 3).map((s) => s.name)}
+                  href={`/jobs/${encodeURIComponent(job.slug || job.id)}`}
+                  actions={
+                    <>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        loading={context.actions.saveJob.isPending}
+                        disabled={context.actions.saveJob.isPending}
+                        onClick={() => context.actions.saveJob.mutate({ job_id: job.id })}
+                      >
+                        <Bookmark size={14} /> Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        loading={context.actions.apply.isPending}
+                        disabled={context.actions.apply.isPending}
+                        onClick={() => context.actions.apply.mutate({ job_id: job.id, source: "dashboard_recommendations" })}
+                      >
+                        Quick Apply
+                      </Button>
+                    </>
+                  }
+                />
+              ))}
             </div>
-          </EnterpriseCard>
-        </div>
+          ) : (
+            <EmptyState
+              icon={<Briefcase size={18} />}
+              title="Active recruitment jobs available"
+              description="Our verified hospital & tech networks are hiring across India."
+              action={<a className={linkClass} href="/jobs">Browse all job listings</a>}
+            />
+          )}
+          {displayJobs.length > 6 ? (
+            <div className="mt-5 text-center">
+              <a href="/jobs" className={cn(linkClass, "w-full sm:w-auto px-8 py-3 bg-[var(--cos-surface-container-low)] font-bold")}>
+                View all matching active roles &rarr;
+              </a>
+            </div>
+          ) : null}
+        </EnterpriseCard>
+
+        <ProfileCompletionCard candidate={context.candidate} completion={completion} skills={context.skills} education={items(context.data.education.data)} experience={items(context.data.experience.data)} />
+
+        <EnterpriseCard title="Application & Account Tracker" description="Live status updates from your job applications and recruiter interactions." icon={<Clock3 size={18} />} disabled={false}>
+          {activity.length ? (
+            <div className="divide-y divide-[var(--cos-outline-variant)]">
+              {activity.slice(0, 6).map((item) => (
+                <div key={item.key} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[var(--cos-primary)]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold">{item.title}</p>
+                    <p className="mt-0.5 text-sm text-[var(--cos-on-surface-variant)]">{item.description}</p>
+                    <time className="mt-1 block text-xs font-medium text-[var(--cos-on-surface-variant)]">{formatDate(item.at)}</time>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[var(--radius-career-button)] border border-dashed border-[var(--cos-outline-variant)] p-6 text-center">
+              <p className="font-semibold">No recent application activities yet</p>
+              <p className="mt-1 text-sm text-[var(--cos-on-surface-variant)]">Submit your first application to track recruiter review rounds and offer milestones here.</p>
+              <a href="/jobs" className={cn(linkClass, "mt-4")}>Start applying now</a>
+            </div>
+          )}
+        </EnterpriseCard>
+
+        <EnterpriseCard title="Profile Visibility & Tips" description="Your current visibility setting and general job-search advice." icon={<Building2 size={18} />} disabled={false}>
+          <div className="grid gap-4 text-sm">
+            <div className="rounded-[var(--radius-career-button)] bg-[var(--cos-surface-container-low)] p-3.5">
+              <div className="flex items-center justify-between font-bold">
+                <span>Resume Visibility</span>
+                <Badge tone={context.candidate.visibility === "public" ? "success" : "neutral"}>{context.candidate.visibility === "public" ? "Public" : "Private"}</Badge>
+              </div>
+              <p className="mt-1 text-xs text-[var(--cos-on-surface-variant)]">{context.candidate.visibility === "public" ? "Your profile is viewable by employers and recruiters." : "Your profile is private and not visible to employers. Change this in Settings."}</p>
+            </div>
+
+            <div className="border-t border-[var(--cos-outline-variant)] pt-3">
+              <p className="font-bold">Career Upgrade Tip</p>
+              <p className="mt-1 text-xs text-[var(--cos-on-surface-variant)]">A complete profile with skills, experience, and a verified resume gives employers a clearer picture of your candidacy.</p>
+              <a href="/candidate/profile" className={cn(linkClass, "mt-3 w-full text-xs h-9")}>Update profile skills</a>
+            </div>
+          </div>
+        </EnterpriseCard>
       </div>
       {context.recentJobs.length ? <RecentSection jobs={context.recentJobs.slice(0, 3)} /> : null}
     </div>
@@ -577,7 +571,7 @@ function SavedJobsView({ data, actions }: CandidateContext) {
         { label: "Company", value: company, setValue: setCompany, options: [["all", "All companies"], ...companies.map((value) => [value, value] as [string, string])] },
         { label: "Sort", value: sort, setValue: setSort, options: [["saved-desc", "Recently saved"], ["saved-asc", "Oldest saved"], ["title", "Job title A-Z"]] }
       ]} />
-      {filtered.length ? <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filtered.map((job) => <SavedJobCard key={job.job_id || job.slug || job.title} job={job} actions={actions} />)}</div> : <div className="mt-5"><EmptyState icon={<Bookmark size={18} />} title={all.length ? "No saved jobs match" : "No saved jobs"} description={all.length ? "Clear your search or company filter." : "Save jobs while browsing to compare and apply later."} action={all.length ? <Button onClick={() => { setSearch(""); setCompany("all"); }}>Clear filters</Button> : <a className={linkClass} href="/jobs">Browse jobs</a>} /></div>}
+      {filtered.length ? <div className="mt-5 grid gap-4">{filtered.map((job) => <SavedJobCard key={job.job_id || job.slug || job.title} job={job} actions={actions} />)}</div> : <div className="mt-5"><EmptyState icon={<Bookmark size={18} />} title={all.length ? "No saved jobs match" : "No saved jobs"} description={all.length ? "Clear your search or company filter." : "Save jobs while browsing to compare and apply later."} action={all.length ? <Button onClick={() => { setSearch(""); setCompany("all"); }}>Clear filters</Button> : <a className={linkClass} href="/jobs">Browse jobs</a>} /></div>}
     </EnterpriseCard>
   );
 }
@@ -616,13 +610,13 @@ function RecentJobsView({ jobs }: { jobs: RecentJob[] }) {
   const clear = () => { localStorage.removeItem(recentJobsStorageKey); setItemsState([]); };
   return (
     <EnterpriseCard title="Recently Viewed" description="Jobs you opened on this device. This history is stored only in your browser." icon={<History size={18} />} badge={<Badge>{itemsState.length}</Badge>} actions={itemsState.length ? <Button size="sm" variant="secondary" onClick={clear}>Clear history</Button> : undefined} disabled={false}>
-      {itemsState.length ? <><label className="mt-4 block"><span className="sr-only">Search recent jobs</span><span className="relative block"><Search className="pointer-events-none absolute left-3 top-3 text-[var(--cos-on-surface-variant)]" size={17} /><input className={cn(inputClass, "pl-10")} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search recent jobs" /></span></label><div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filtered.map((job) => <RecentJobCard key={`${job.id}-${job.viewed_at}`} job={job} />)}</div>{!filtered.length ? <div className="mt-5"><EmptyState compact title="No recent jobs match" description="Try another job title or company." action={<Button onClick={() => setSearch("")}>Clear search</Button>} /></div> : null}</> : <EmptyState icon={<History size={18} />} title="No recently viewed jobs" description="Open a job detail page and it will appear here for easy access." action={<a className={linkClass} href="/jobs">Continue browsing</a>} />}
+      {itemsState.length ? <><label className="mt-4 block"><span className="sr-only">Search recent jobs</span><span className="relative block"><Search className="pointer-events-none absolute left-3 top-3 text-[var(--cos-on-surface-variant)]" size={17} /><input className={cn(inputClass, "pl-10")} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search recent jobs" /></span></label><div className="mt-5 grid gap-4">{filtered.map((job) => <RecentJobCard key={`${job.id}-${job.viewed_at}`} job={job} />)}</div>{!filtered.length ? <div className="mt-5"><EmptyState compact title="No recent jobs match" description="Try another job title or company." action={<Button onClick={() => setSearch("")}>Clear search</Button>} /></div> : null}</> : <EmptyState icon={<History size={18} />} title="No recently viewed jobs" description="Open a job detail page and it will appear here for easy access." action={<a className={linkClass} href="/jobs">Continue browsing</a>} />}
     </EnterpriseCard>
   );
 }
 
 function RecentSection({ jobs }: { jobs: RecentJob[] }) {
-  return <EnterpriseCard title="Recently Viewed" description="Continue where you left off." icon={<History size={18} />} actions={<a className={linkClass} href="/candidate/jobs/history">View all</a>} disabled={false}><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{jobs.map((job) => <RecentJobCard key={`${job.id}-${job.viewed_at}`} job={job} />)}</div></EnterpriseCard>;
+  return <EnterpriseCard title="Recently Viewed" description="Continue where you left off." icon={<History size={18} />} actions={<a className={linkClass} href="/candidate/jobs/history">View all</a>} disabled={false}><div className="grid gap-4">{jobs.map((job) => <RecentJobCard key={`${job.id}-${job.viewed_at}`} job={job} />)}</div></EnterpriseCard>;
 }
 
 function RecentJobCard({ job }: { job: RecentJob }) {
@@ -639,7 +633,7 @@ function RecommendedSection({ jobs, actions, matched }: { jobs: PublicJob[]; act
   const description = matched
     ? "Published jobs ranked from the skills and location currently saved in your profile."
     : "Showing all open jobs. Add skills and location to your profile to see roles matched to you instead.";
-  return <EnterpriseCard title={title} description={description} icon={<Sparkles size={18} />} actions={!matched ? <a className={linkClass} href="/candidate/profile">Complete profile</a> : undefined} disabled={false}><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{jobs.map((job) => <JobCard key={job.id} title={job.title} company={job.company_name} location={[job.city, job.state].filter(Boolean).join(", ")} salary={jobSalary(job)} tags={(job.skills || []).slice(0, 3).map((skill) => skill.name)} href={`/jobs/${encodeURIComponent(job.slug)}`} actions={<>{job.id ? <Button size="sm" loading={actions.saveJob.isPending} disabled={actions.saveJob.isPending} onClick={() => actions.saveJob.mutate({ job_id: job.id })}><Bookmark size={15} /> Save</Button> : null}<a className={linkClass} href={`/jobs/${encodeURIComponent(job.slug)}`}>View job</a></>} />)}</div></EnterpriseCard>;
+  return <EnterpriseCard title={title} description={description} icon={<Sparkles size={18} />} actions={!matched ? <a className={linkClass} href="/candidate/profile">Complete profile</a> : undefined} disabled={false}><div className="grid gap-4">{jobs.map((job) => <JobCard key={job.id} title={job.title} company={job.company_name} location={[job.city, job.state].filter(Boolean).join(", ")} salary={jobSalary(job)} tags={(job.skills || []).slice(0, 3).map((skill) => skill.name)} href={`/jobs/${encodeURIComponent(job.slug)}`} actions={<>{job.id ? <Button size="sm" loading={actions.saveJob.isPending} disabled={actions.saveJob.isPending} onClick={() => actions.saveJob.mutate({ job_id: job.id })}><Bookmark size={15} /> Save</Button> : null}<a className={linkClass} href={`/jobs/${encodeURIComponent(job.slug)}`}>View job</a></>} />)}</div></EnterpriseCard>;
 }
 
 function ProfileView(context: CandidateContext & { readOnly?: boolean }) {
@@ -647,18 +641,14 @@ function ProfileView(context: CandidateContext & { readOnly?: boolean }) {
   const experience = items<ExperienceItem>(context.data.experience.data);
   const completion = completionValue(context.data.completion.data);
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="grid gap-6">
-        <PersonalDetails candidate={context.candidate} actions={context.actions} readOnly={context.readOnly} />
-        <ProfileList title="Experience" icon={<Briefcase size={18} />} empty="No experience added" items={experience.map((item) => ({ id: item.id, title: item.title || "Role", detail: [item.company_name, item.location].filter(Boolean).join(" / "), meta: formatYears(item.start_date, item.end_date, item.is_current) }))} />
-        <ProfileList title="Education" icon={<GraduationCap size={18} />} empty="No education added" items={education.map((item) => ({ id: item.id, title: item.qualification || "Qualification", detail: [item.university, item.field_of_study].filter(Boolean).join(" / "), meta: [item.start_year, item.end_year].filter(Boolean).join(" - ") }))} />
-        <ProfileList title="Skills" icon={<Sparkles size={18} />} empty="No skills added" items={context.skills.map((item) => ({ id: item.id, title: item.name || "Skill", detail: [item.category, item.level].filter(isString).map(titleCase).join(" / "), meta: typeof item.years_experience === "number" && item.years_experience > 0 ? `${item.years_experience} years` : "" }))} />
-        {!context.readOnly ? <ProfileAddForms actions={context.actions} /> : null}
-      </div>
-      <div className="grid content-start gap-6">
-        <ProfileCompletionCard candidate={context.candidate} completion={completion} skills={context.skills} education={education} experience={experience} />
-        <ResumeSummary candidate={context.candidate} actions={context.actions} />
-      </div>
+    <div className="grid gap-6">
+      <ProfileCompletionCard candidate={context.candidate} completion={completion} skills={context.skills} education={education} experience={experience} />
+      <PersonalDetails candidate={context.candidate} actions={context.actions} readOnly={context.readOnly} />
+      <ResumeSummary candidate={context.candidate} actions={context.actions} />
+      <ProfileList title="Experience" icon={<Briefcase size={18} />} empty="No experience added" items={experience.map((item) => ({ id: item.id, title: item.title || "Role", detail: [item.company_name, item.location].filter(Boolean).join(" / "), meta: formatYears(item.start_date, item.end_date, item.is_current) }))} />
+      <ProfileList title="Education" icon={<GraduationCap size={18} />} empty="No education added" items={education.map((item) => ({ id: item.id, title: item.qualification || "Qualification", detail: [item.university, item.field_of_study].filter(Boolean).join(" / "), meta: [item.start_year, item.end_year].filter(Boolean).join(" - ") }))} />
+      <ProfileList title="Skills" icon={<Sparkles size={18} />} empty="No skills added" items={context.skills.map((item) => ({ id: item.id, title: item.name || "Skill", detail: [item.category, item.level].filter(isString).map(titleCase).join(" / "), meta: typeof item.years_experience === "number" && item.years_experience > 0 ? `${item.years_experience} years` : "" }))} />
+      {!context.readOnly ? <ProfileAddForms actions={context.actions} /> : null}
     </div>
   );
 }
@@ -713,7 +703,7 @@ function AddExperienceForm({ actions }: { actions: ReturnType<typeof useCandidat
 }
 
 function ResumeView(context: CandidateContext) {
-  return <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"><ResumeSummary candidate={context.candidate} actions={context.actions} /><EnterpriseCard title="Resume Status" description="Only the current resume URL is available from the profile API." icon={<FileText size={18} />} disabled={false}>{context.candidate.resume_url ? <div className="grid gap-3"><p className="text-sm text-[var(--cos-on-surface-variant)]">Your current resume is available to open or replace.</p><a className={linkClass} href={context.candidate.resume_url} target="_blank" rel="noreferrer"><Download size={15} /> Open resume</a></div> : <EmptyState compact icon={<FileText size={18} />} title="No resume uploaded" description="Upload a PDF or DOCX resume to complete this profile field." />}</EnterpriseCard></div>;
+  return <div className="grid gap-6"><ResumeSummary candidate={context.candidate} actions={context.actions} /><EnterpriseCard title="Resume Status" description="Only the current resume URL is available from the profile API." icon={<FileText size={18} />} disabled={false}>{context.candidate.resume_url ? <div className="grid gap-3"><p className="text-sm text-[var(--cos-on-surface-variant)]">Your current resume is available to open or replace.</p><a className={linkClass} href={context.candidate.resume_url} target="_blank" rel="noreferrer"><Download size={15} /> Open resume</a></div> : <EmptyState compact icon={<FileText size={18} />} title="No resume uploaded" description="Upload a PDF or DOCX resume to complete this profile field." />}</EnterpriseCard></div>;
 }
 
 function ResumeSummary({ candidate, actions }: { candidate: CandidateRecord; actions: ReturnType<typeof useCandidateActions> }) {

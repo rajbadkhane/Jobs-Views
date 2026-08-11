@@ -286,71 +286,34 @@ function EmployerHeader({ view, live }: { view: EmployerView; live: EmployerLive
 function DashboardView({ live }: { live: EmployerLive }) {
   const jobs = liveItems<JobItem>(live.data.jobs.data);
   const applications = liveItems<ApplicationItem>(live.data.applications.data);
-  const team = liveItems<TeamItem>(live.data.team.data);
   const analytics = live.data.analytics.data as AnalyticsData | undefined;
   const interviews = analytics?.interviews ?? applications.filter((item) => includesStatus(item.status, "interview")).length;
   const offers = analytics?.offers ?? applications.filter((item) => includesStatus(item.status, "offer")).length;
-  const hires = analytics?.hires ?? applications.filter((item) => includesStatus(item.status, "hired")).length;
 
   return (
     <div className="grid gap-6">
+      {!isVerified(live.company) ? <VerificationCard company={live.company} /> : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <DashboardCard label="Open Jobs" value={String(jobs.filter((job) => job.status === "published").length)} trend="Today hiring" icon={<Briefcase size={18} />} />
-        <DashboardCard label="Applications" value={String(analytics?.total_applications ?? applications.length)} trend="Live ATS inbox" icon={<Users size={18} />} />
-        <DashboardCard label="Interviews" value={String(interviews)} trend="Calendar ready" icon={<CalendarDays size={18} />} />
-        <DashboardCard label="Offers" value={String(offers)} trend={`${hires} hires`} icon={<CheckCircle2 size={18} />} />
+        <DashboardCard label="Open jobs" value={String(jobs.filter((job) => job.status === "published").length)} icon={<Briefcase size={18} />} />
+        <DashboardCard label="Applications" value={String(analytics?.total_applications ?? applications.length)} icon={<Users size={18} />} />
+        <DashboardCard label="Interviews" value={String(interviews)} icon={<CalendarDays size={18} />} />
+        <DashboardCard label="Offers" value={String(offers)} icon={<CheckCircle2 size={18} />} />
       </div>
-      <EmployerExclusiveGrid jobs={jobs} applications={applications} team={team} analytics={analytics} />
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_420px]">
-        <AnalyticsPanel analytics={analytics} />
-        <CommandCenter applications={applications} jobs={jobs} />
-      </div>
-      <div className="grid gap-6 lg:grid-cols-3">
-        <RecentActivity applications={applications} />
-        <InterviewCard applications={applications} />
-        <VerificationCard company={live.company} />
-      </div>
-    </div>
-  );
-}
-
-function EmployerExclusiveGrid({ jobs, applications, team, analytics }: { jobs: JobItem[]; applications: ApplicationItem[]; team: TeamItem[]; analytics?: AnalyticsData }) {
-  const widgets = [
-    ["Hiring Health", hiringHealth(jobs, applications, analytics), "Calculated from current jobs and application outcomes", Gauge],
-    ["Pipeline Health", pipelineHealth(applications), "Calculated from current application stages", Archive],
-    ["Applications", analytics?.total_applications ?? applications.length, "Applications returned by the ATS", Users],
-    ["Interviews", analytics?.interviews ?? 0, "Recorded interview-stage applications", CalendarDays],
-    ["Offers", analytics?.offers ?? 0, "Recorded offer-stage applications", FileText],
-    ["Hires", analytics?.hires ?? 0, "Recorded hired applications", CheckCircle2],
-    ["Team Members", team.length, "Accepted and invited workspace members", UserPlus]
-  ] as const;
-  return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {widgets.map(([title, value, detail, Icon]) => (
-        <EnterpriseCard key={title} title={title} description={detail} icon={<Icon size={18} />} badge={<Badge tone={title.includes("Health") && value >= 75 ? "success" : "info"}>{title.includes("Health") ? `${value}%` : value}</Badge>}>
-          {title.includes("Health") ? <ProgressBar value={value} /> : <p className="text-2xl font-bold">{value}</p>}
-        </EnterpriseCard>
-      ))}
+      <RecentActivity applications={applications} />
+      <CommandCenter applications={applications} jobs={jobs} />
     </div>
   );
 }
 
 function CommandCenter({ applications, jobs }: { applications: ApplicationItem[]; jobs: JobItem[] }) {
-  const closingSoon = jobs.filter((job) => job.status !== "closed").slice(0, 3);
+  const pendingOffers = applications.filter((item) => includesStatus(item.status, "offer")).length;
+  const openJobs = jobs.filter((job) => job.status !== "closed").slice(0, 5);
   return (
-    <div className="grid gap-6">
-      <EnterpriseCard title="Hiring Command Center" description="Live application and offer activity from the current company workspace." icon={<Zap size={18} />} badge={<Badge tone="premium">Live</Badge>}>
-        <Timeline items={[
-          { title: "Applications today", description: `${applications.length} candidates in review`, tone: "info" },
-          { title: "Offer pending", description: `${applications.filter((item) => includesStatus(item.status, "offer")).length} candidates need decision`, tone: "warning" }
-        ]} />
-      </EnterpriseCard>
-      <EnterpriseCard title="Jobs Closing Soon" description="Publishing and pause workflow ready." icon={<Briefcase size={18} />}>
-        <div className="grid gap-2">
-          {closingSoon.length ? closingSoon.map((job) => <InfoRow key={job.id ?? job.title} label={job.title ?? "Untitled job"} value={job.status ?? "draft"} />) : <EmptyState title="No active jobs" />}
-        </div>
-      </EnterpriseCard>
-    </div>
+    <EnterpriseCard title="Your open jobs" description={pendingOffers ? `${pendingOffers} candidate${pendingOffers === 1 ? "" : "s"} waiting on an offer decision from you.` : "Jobs you're currently hiring for."} icon={<Briefcase size={18} />}>
+      <div className="grid gap-2">
+        {openJobs.length ? openJobs.map((job) => <InfoRow key={job.id ?? job.title} label={job.title ?? "Untitled job"} value={job.status ?? "draft"} />) : <EmptyState title="No open jobs yet" description="Post a job to start receiving applications." />}
+      </div>
+    </EnterpriseCard>
   );
 }
 
@@ -687,22 +650,13 @@ function RecentActivity({ applications }: { applications: ApplicationItem[] }) {
   );
 }
 
-function InterviewCard({ applications }: { applications: ApplicationItem[] }) {
-  const interviews = applications.filter((item) => includesStatus(item.status, "interview"));
-  return (
-    <EnterpriseCard title="Upcoming Interviews" description="Interview rooms and meeting links ready." icon={<CalendarDays size={18} />} badge={<Badge>{interviews.length}</Badge>}>
-      {interviews.length ? <Timeline items={interviews.slice(0, 4).map((item) => ({ title: item.candidate_name ?? item.candidate_email ?? "Candidate", description: item.job_title ?? "Interview", tone: "info" }))} /> : <EmptyState title="No interviews scheduled" />}
-    </EnterpriseCard>
-  );
-}
-
 function VerificationCard({ company }: { company?: CompanyItem }) {
   return (
-    <EnterpriseCard title="Verification" description="GST, CIN, documents, timeline, approval status, and checklist." icon={<BadgeCheck size={18} />} badge={<Badge tone={isVerified(company) ? "success" : "warning"}>{isVerified(company) ? "Verified" : "Review"}</Badge>}>
+    <EnterpriseCard title="Your company is being reviewed" description="An admin needs to approve your company before you can post jobs. This is usually quick." icon={<BadgeCheck size={18} />} badge={<Badge tone={isVerified(company) ? "success" : "warning"}>{isVerified(company) ? "Approved" : "Pending review"}</Badge>}>
       <Timeline items={[
-        { title: "GST", description: company?.gst_number ?? "GST verification pending", tone: company?.gst_number ? "success" : "warning" },
-        { title: "CIN", description: company?.cin_number ?? "CIN verification pending", tone: company?.cin_number ? "success" : "warning" },
-        { title: "Domain", description: company?.website ?? employer.company.website, tone: "info" }
+        { title: "GST number", description: company?.gst_number ?? "Not added yet", tone: company?.gst_number ? "success" : "neutral" },
+        { title: "CIN number", description: company?.cin_number ?? "Not added yet", tone: company?.cin_number ? "success" : "neutral" },
+        { title: "Website", description: company?.website ?? employer.company.website, tone: "info" }
       ]} />
     </EnterpriseCard>
   );

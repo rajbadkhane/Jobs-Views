@@ -13,25 +13,11 @@ export const appConfig = {
     primaryOrange: "#F59E0B",
     primaryOrangeHover: "#D97706"
   },
-  developmentAccounts: {
-    admin: {
-      email: process.env.NEXT_PUBLIC_DEMO_ADMIN_EMAIL ?? "admin.one@jobsview.local",
-      password: process.env.NEXT_PUBLIC_DEMO_ADMIN_PASSWORD ?? "Admin@One2026!"
-    },
-    employer: {
-      email: process.env.NEXT_PUBLIC_DEMO_EMPLOYER_EMAIL ?? "employer@jobsview.local",
-      password: process.env.NEXT_PUBLIC_DEMO_EMPLOYER_PASSWORD ?? "Employer@123"
-    },
-    candidate: {
-      email: process.env.NEXT_PUBLIC_DEMO_CANDIDATE_EMAIL ?? "candidate@jobsview.local",
-      password: process.env.NEXT_PUBLIC_DEMO_CANDIDATE_PASSWORD ?? "Candidate@123"
-    }
-  },
-  hardcodedAdmins: [
-    { email: "admin.one@jobsview.local", password: "Admin@One2026!" },
-    { email: "admin.two@jobsview.local", password: "Admin@Two2026!" },
-    { email: "admin.three@jobsview.local", password: "Admin@Three2026!" }
-  ],
+  // Emails only - used to detect "this is an admin account, use the admin
+  // login page instead" on the public login form. Never ship passwords in a
+  // client-side config object; it's bundled into the JS sent to every
+  // visitor regardless of whether any component renders it.
+  adminAccountEmails: ["admin.one@jobsview.local", "admin.two@jobsview.local", "admin.three@jobsview.local"],
   uploadMaxBytes: Number(process.env.NEXT_PUBLIC_UPLOAD_MAX_BYTES ?? 10_485_760),
   analytics: {
     gaMeasurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "G-GPLY4MG6PV",

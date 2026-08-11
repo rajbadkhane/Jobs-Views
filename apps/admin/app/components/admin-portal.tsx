@@ -71,10 +71,20 @@ export type UserItem = {
   role?: string;
   is_active?: boolean;
   is_verified?: boolean;
+  email_verified_at?: string;
   created_at?: string;
+  updated_at?: string;
   subscription_plan?: string;
   subscription_status?: string;
   subscription_ends_at?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  title?: string;
+  candidate_visibility?: string;
+  company_id?: string;
+  company_name?: string;
+  company_status?: string;
 };
 export type PlanItem = {
   id?: number;

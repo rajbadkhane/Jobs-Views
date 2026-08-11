@@ -306,8 +306,7 @@ export const companyApi = {
   updateSettings: (id: string, payload: Record<string, unknown>) => request<unknown>(api, { method: "PATCH", url: `/companies/${id}/settings`, data: payload }),
   uploadMedia: (id: string, type: "logo" | "banner" | "gallery" | "document", file: File) =>
     request<unknown>(api, { method: "POST", url: `/companies/${id}/media/${type}`, data: formData("file", file) }),
-  setStatus: (id: string, payload: Record<string, unknown>) => request<unknown>(api, { method: "PATCH", url: `/companies/${id}/status`, data: payload }),
-  verify: (id: string, payload: Record<string, unknown>) => request<unknown>(api, { method: "POST", url: `/companies/${id}/verification`, data: payload })
+  verify: (id: string) => request<unknown>(api, { method: "PATCH", url: `/admin/companies/${id}/verify` })
 };
 
 export const jobsApi = {

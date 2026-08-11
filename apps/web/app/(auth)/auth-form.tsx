@@ -109,7 +109,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     if (mode === "login") {
       const credentials = values as { email: string; password: string };
       const adminEmail = credentials.email.trim().toLowerCase();
-      if (appConfig.hardcodedAdmins.some((account) => account.email.toLowerCase() === adminEmail)) {
+      if (appConfig.adminAccountEmails.some((email) => email.toLowerCase() === adminEmail)) {
         setLocalError("Admin accounts can only sign in from the admin panel.");
         return;
       }
@@ -216,7 +216,6 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
             </Button>
           </form>
 
-          {mode === "login" ? <TestCredentials /> : null}
           {mode === "login" ? <SocialLogin /> : null}
           <AuthLinks mode={mode} nextPath={nextPath} />
         </Card>
@@ -225,26 +224,6 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   );
 }
 
-function TestCredentials() {
-  const accounts = [
-    { label: "Candidate", email: appConfig.developmentAccounts.candidate.email, password: appConfig.developmentAccounts.candidate.password },
-    { label: "Employer", email: appConfig.developmentAccounts.employer.email, password: appConfig.developmentAccounts.employer.password }
-  ];
-  return (
-    <div className="mt-5 rounded-[var(--radius-career-card)] border border-[var(--cos-outline-variant)] bg-[var(--cos-surface-container-low)] p-3 text-sm">
-      <div className="font-bold text-[var(--cos-primary)]">Test login credentials</div>
-      <div className="mt-3 grid gap-2">
-        {accounts.map((account) => (
-          <div key={account.label} className="rounded-[var(--radius-career-button)] bg-[var(--cos-surface-container-lowest)] p-3">
-            <div className="font-semibold">{account.label}</div>
-            <div className="mt-1 break-all text-xs text-[var(--cos-on-surface-variant)]">{account.email}</div>
-            <div className="mt-1 text-xs font-semibold">{account.password}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function LoginFields({ registerField, formErrors }: FieldProps) {
   return (

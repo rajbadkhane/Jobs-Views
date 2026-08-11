@@ -17,15 +17,6 @@ export default function AdminLoginPage() {
         <p className="mt-4 text-xs font-bold uppercase tracking-[0.18em] text-[var(--cos-primary)]">{appConfig.brand.tagline}</p>
         <h1 className="mt-3 text-2xl font-bold">Admin login</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--cos-on-surface-variant)]">Use the shared authentication system to access the Jobs View admin control center.</p>
-        <dl className="mt-5 rounded-[var(--radius-career-button)] bg-[var(--cos-surface-container-low)] p-4 text-sm">
-          {appConfig.hardcodedAdmins.map((account, index) => (
-            <div key={account.email} className={index ? "mt-3 border-t border-[var(--cos-outline-variant)] pt-3" : undefined}>
-              <dt className="font-semibold">Admin {index + 1}</dt>
-              <dd className="mt-1 break-all text-[var(--cos-on-surface-variant)]">{account.email}</dd>
-              <dd className="mt-1 font-semibold">{account.password}</dd>
-            </div>
-          ))}
-        </dl>
         <AdminLoginForm />
       </section>
     </main>

@@ -4,15 +4,13 @@ import type React from "react";
 import { useState } from "react";
 import { Mail, Lock, ShieldCheck } from "lucide-react";
 
-import { appConfig } from "@career-os/config";
 import { apiErrorMessage, authApi, useAuthStore } from "@career-os/shared";
 import { Button } from "@career-os/ui";
 
 export function AdminLoginForm() {
-  const account = appConfig.developmentAccounts.admin;
   const setSession = useAuthStore((state) => state.setSession);
-  const [email, setEmail] = useState(account.email);
-  const [password, setPassword] = useState(account.password);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isPending, setIsPending] = useState(false);
 

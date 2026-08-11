@@ -205,24 +205,33 @@ export function UsersView({
       width: 270,
       hideable: false,
       sortValue: (row) => row.email,
-      cell: (row) => (
-        <div>
-          <div className="font-semibold">
-            {row.email || "Email unavailable"}
-          </div>
-          {row.id ? (
-            <div className="mt-1 truncate text-xs text-[var(--cos-on-surface-variant)]">
-              {row.id}
+      cell: (row) => {
+        const name = [row.first_name, row.last_name].filter(Boolean).join(" ");
+        return (
+          <div>
+            <div className="font-semibold">
+              {name || row.email || "Email unavailable"}
             </div>
-          ) : null}
-        </div>
-      ),
+            {name && row.email ? (
+              <div className="mt-1 truncate text-xs text-[var(--cos-on-surface-variant)]">
+                {row.email}
+              </div>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       id: "role",
       header: "Role",
       sortValue: (row) => row.role,
       cell: (row) => (row.role ? <Badge>{row.role}</Badge> : null),
+    },
+    {
+      id: "company",
+      header: "Company",
+      sortValue: (row) => row.company_name,
+      cell: (row) => row.company_name ? <span>{row.company_name}</span> : <span className="text-[var(--cos-on-surface-variant)]">—</span>,
     },
     {
       id: "status",
@@ -356,12 +365,19 @@ export function UsersView({
         <DetailList
           items={[
             { label: "ID", value: detail?.id },
+            { label: "Name", value: [detail?.first_name, detail?.last_name].filter(Boolean).join(" ") || undefined },
+            { label: "Email", value: detail?.email },
+            { label: "Phone", value: detail?.phone },
+            { label: "Title", value: detail?.title },
             { label: "Role", value: detail?.role },
             {
               label: "Status",
               value: detail?.is_active === false ? "Suspended" : "Active",
             },
-            { label: "Verified", value: detail?.is_verified ? "Yes" : "No" },
+            { label: "Email verified", value: detail?.email_verified_at ? `Yes, ${formatDate(detail.email_verified_at)}` : detail?.is_verified ? "Yes" : "No" },
+            detail?.role === "EMPLOYER" ? { label: "Company", value: detail?.company_name } : undefined,
+            detail?.role === "EMPLOYER" ? { label: "Company status", value: detail?.company_status ? titleCase(detail.company_status) : undefined } : undefined,
+            detail?.role === "JOB_SEEKER" ? { label: "Profile visibility", value: detail?.candidate_visibility ? titleCase(detail.candidate_visibility) : undefined } : undefined,
             {
               label: "Subscription",
               value:
@@ -370,7 +386,8 @@ export function UsersView({
                   : "Free",
             },
             { label: "Created", value: formatDate(detail?.created_at) },
-          ]}
+            { label: "Last updated", value: formatDate(detail?.updated_at) },
+          ].filter(Boolean) as { label: string; value?: string }[]}
         />
         <div className="mt-5 flex flex-wrap gap-2">
           {detail?.is_active === false ? (
@@ -626,6 +643,7 @@ export function CompaniesView({ live }: { live: AdminLive }) {
             { label: "Headquarters", value: detail?.headquarters },
             { label: "Size", value: detail?.size_range },
             { label: "Founded", value: detail?.founded_year },
+            { label: "Admin notes", value: detail?.verification_notes },
             { label: "Created", value: formatDate(detail?.created_at) },
             { label: "Updated", value: formatDate(detail?.updated_at) },
           ]}

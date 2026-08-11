@@ -1,9 +1,16 @@
 import { Hono } from "hono";
 import { getDb } from "../db";
 import { authenticate, requirePermission, getCurrentUser, AppEnv } from "../middleware";
+import { sendMail, resetPasswordEmailHTML } from "../lib/mail";
 
 export const usersRouter = new Hono<AppEnv>();
 export const adminUsersRouter = new Hono<AppEnv>();
+
+async function hashToken(token: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(token);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 usersRouter.use("/*", authenticate());
 
@@ -115,11 +122,22 @@ adminUsersRouter.get("/", async (c) => {
     const search = c.req.query("search") || c.req.query("q") || "";
     const sql = getDb(c.env);
     const users = await sql`
-      SELECT u.id, u.email, u.is_active, u.is_verified, u.created_at, r.name as role,
-        sub.plan_name as subscription_plan, sub.status as subscription_status, sub.ends_at as subscription_ends_at
+      SELECT u.id, u.email, u.is_active, u.is_verified, u.email_verified_at, u.created_at, u.updated_at, r.name as role,
+        sub.plan_name as subscription_plan, sub.status as subscription_status, sub.ends_at as subscription_ends_at,
+        COALESCE(cp.first_name, ep.first_name) as first_name,
+        COALESCE(cp.last_name, ep.last_name) as last_name,
+        COALESCE(cp.phone, ep.phone) as phone,
+        COALESCE(cp.title, ep.title) as title,
+        cp.visibility as candidate_visibility,
+        co.id as company_id,
+        co.name as company_name,
+        co.status as company_status
       FROM users u
       JOIN user_roles ur ON ur.user_id = u.id
       JOIN roles r ON r.id = ur.role_id
+      LEFT JOIN candidate_profiles cp ON cp.user_id = u.id
+      LEFT JOIN employer_profiles ep ON ep.user_id = u.id
+      LEFT JOIN companies co ON co.id = ep.company_id
       LEFT JOIN LATERAL (
         SELECT p.name as plan_name, cs.status, cs.ends_at
         FROM candidate_subscriptions cs
@@ -130,7 +148,7 @@ adminUsersRouter.get("/", async (c) => {
       ) sub ON true
       WHERE u.deleted_at IS NULL
       ${roleFilter ? sql`AND r.name ILIKE ${roleFilter}` : sql``}
-      ${search ? sql`AND u.email ILIKE ${'%' + search + '%'}` : sql``}
+      ${search ? sql`AND (u.email ILIKE ${'%' + search + '%'} OR cp.first_name ILIKE ${'%' + search + '%'} OR cp.last_name ILIKE ${'%' + search + '%'} OR ep.first_name ILIKE ${'%' + search + '%'} OR ep.last_name ILIKE ${'%' + search + '%'} OR co.name ILIKE ${'%' + search + '%'})` : sql``}
       ORDER BY u.created_at DESC LIMIT 50
     `;
     await sql.end();
@@ -162,6 +180,32 @@ adminUsersRouter.patch("/:id/activate", async (c) => {
     return c.json({ success: true, message: "Account re-activated successfully." });
   } catch (err: any) {
     return c.json({ success: false, error: { code: 500, message: "Activation failed" } }, 500);
+  }
+});
+
+adminUsersRouter.post("/:id/reset-password", async (c) => {
+  const targetId = c.req.param("id");
+  try {
+    const sql = getDb(c.env);
+    const rows = await sql`SELECT id, email FROM users WHERE id = ${targetId} AND deleted_at IS NULL LIMIT 1`;
+    if (rows.length === 0) {
+      await sql.end();
+      return c.json({ success: false, error: { code: 404, message: "User not found." } }, 404);
+    }
+    const user = rows[0];
+    const rawToken = crypto.randomUUID() + crypto.randomUUID();
+    const tokenHash = await hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    await sql`INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (${user.id}, ${tokenHash}, ${expiresAt})`;
+    await sql`UPDATE user_sessions SET revoked_at = NOW() WHERE user_id = ${user.id} AND revoked_at IS NULL`;
+    await sql.end();
+    const resetUrl = `https://jobsviews.com/reset-password?token=${rawToken}`;
+    await sendMail(c.env, user.email, "Reset your Jobs View password", resetPasswordEmailHTML(resetUrl)).catch((err: any) => {
+      console.error("[Edge Admin] Password reset email failed:", err.message);
+    });
+    return c.json({ success: true, message: "Password reset email sent to the user." });
+  } catch (err: any) {
+    return c.json({ success: false, error: { code: 500, message: "Reset password failed", details: err.message } }, 500);
   }
 });
 
